@@ -1,0 +1,61 @@
+<!-- STARTSEITE-HINTERGRUND -->
+<div class="startscreen">
+  <img src="startscreen.png" class="start-bg" />
+
+  <!-- BUTTON 1 – KIPP COLOR -->
+  <button class="menu-btn btn-color">KIPP COLOR</button>
+
+  <!-- BUTTON 2 – KIPP CARD -->
+  <button class="menu-btn btn-card">KIPP CARD</button>
+
+  <!-- BUTTON 3 – KIPP FAIRY (INAKTIV) -->
+  <button class="menu-btn btn-fairy" disabled>KIPP FAIRY</button>
+</div>
+
+
+<style>
+/* --- Startseiten-Bereich --- */
+.startscreen {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.start-bg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* --- Gemeinsamer Button-Stil --- */
+.menu-btn {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 72%;
+  padding: 18px 0;
+  font-size: 1.4rem;
+  font-family: Futura, sans-serif;
+  font-weight: 700;
+  border-radius: 14px;
+  border: none;
+  background: #e5d4bd;      /* dein DigiKipp-Button Beige */
+  color: #000;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.25);
+}
+
+/* Positionen in deinem Raster */
+.btn-color { top: 62%; }     /* Zeile 10 */
+.btn-card  { top: 70%; }     /* Zwischen Zeile 11 und 12 */
+.btn-fairy { top: 78%; }     /* Zeile 13 */
+
+/* --- Inaktiv / Coming Soon Stil --- */
+.btn-fairy {
+  background: #dcd2c7;
+  color: #9c938b;
+  box-shadow: none;
+  opacity: 0.55;
+}
+</style>
