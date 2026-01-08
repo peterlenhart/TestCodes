@@ -1,241 +1,85 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DigiKipp – Start</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <style>
-    :root{
-      --cols: 8;
-      --cell: 142px;
+<title>DIGIKIPP – Start</title>
 
-      --scale: 1;
-      --uiscale: 1;
-      --gridW: calc(var(--cols) * var(--cell));
-      --gridH: 100vh;
+<style>
+/* -------------------- BASIS -------------------- */
+:root{
+  --beige: #e5d4bd;
+  --inactive: #dcd2c7;
+  --font: Futura, sans-serif;
+}
 
-      --ui-panel-bg: #4a2418;
-      --ui-text: #ead7be;
-      --btn-bg: #ead7be;
-      --btn-text: #2a160c;
+body{
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #000;
+  font-family: var(--font);
+}
 
-      --bg-off-x: 0px;
-      --bg-off-y: 0px;
-    }
+/* -------------------- STARTSCREEN -------------------- */
+.startscreen{
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
 
-    html, body{
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      touch-action: manipulation;
-      background: #000;
-    }
+.start-bg{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
-    body{
-      display:flex;
-      justify-content:center;
-      align-items:flex-start;
-    }
+/* -------------------- BUTTONS -------------------- */
+.menu-btn{
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 72%;
+  padding: 18px 0;
+  font-size: 1.4rem;
+  font-family: var(--font);
+  font-weight: 700;
+  border-radius: 14px;
+  border: none;
+  background: var(--beige);
+  color: #000;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.25);
+}
 
-    .stage{
-      width: 100vw;
-      height: 100vh;
-      position: relative;
-      overflow: hidden;
-    }
+/* Positionierung wie bei deinem Spielraster */
+.btn-kippcolor{ top: 62%; }   /* Zeile 10 */
+.btn-kipppcard{ top: 70%; }   /* Zeile 11/12 */
+.btn-kipppfairy{ top: 78%; }  /* Zeile 13 */
 
-    .layout{
-      position: absolute;
-      left: 50%;
-      top: 0;
-      width: var(--gridW);
-      height: var(--gridH);
-      transform-origin: top center;
-      transform: translateX(-50%) scale(var(--scale));
-    }
+/* -------------------- INAKTIV / COMING SOON -------------------- */
+.btn-kipppfairy{
+  background: var(--inactive);
+  color: #6d6660;
+  opacity: 0.55;
+  box-shadow: none;
+}
+</style>
 
-    /* Hintergrund – deine Startseite */
-    .bgPNG{
-      position:absolute;
-      left: 0;
-      top: 0;
-      width: var(--gridW);
-      height: var(--gridH);
-      background-image: url("digikipp_starts.png");
-      background-repeat: no-repeat;
-      background-size: 100% auto;
-      background-position:
-        calc(0px + var(--bg-off-x))
-        calc(0px + var(--bg-off-y));
-      pointer-events:none;
-      z-index:0;
-    }
-
-    .uiLayer{
-      position:absolute;
-      left:0;
-      top:0;
-      width:var(--gridW);
-      height:var(--gridH);
-      z-index:10;
-      pointer-events:none;
-    }
-
-    /* Button-Stil wie im Spiel (squareBtn + startBtn) */
-    .squareBtn{
-      width: calc(520px * var(--uiscale));
-      max-width: calc(7 * var(--cell));
-      height: calc(44px * var(--uiscale));
-      border-radius: calc(14px * var(--uiscale));
-      border: 2px solid rgba(0,0,0,0.65);
-      background: rgba(234,215,190,0.96);
-      box-shadow:
-        0 10px 18px rgba(0,0,0,0.22),
-        0 0 0 1px rgba(255,255,255,0.18) inset;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
-      cursor: pointer;
-      pointer-events:auto;
-    }
-    .squareBtn:active{
-      transform: scale(0.98);
-      filter: brightness(0.98);
-    }
-
-    .startBtnText{
-      font-weight: 1000;
-      letter-spacing: 0.06em;
-      color: #7a3f2b;
-      text-shadow: 0 1px 0 rgba(255,255,255,0.35);
-      font-size: calc(18px * var(--uiscale));
-      line-height:1;
-      text-transform:uppercase;
-    }
-
-    /* Positionierung der drei Buttons im Raster */
-    .menu-btn{
-      position:absolute;
-      left:50%;
-      transform:translate(-50%, -50%);
-    }
-
-    /* Plätze (Zeilen) werden per JS gesetzt, Klassen bleiben leer */
-
-    /* Inaktiver Fairy-Button */
-    .fairyBtn{
-      background:#dcd2c7;
-      color:#9c938b;
-      box-shadow:none;
-      opacity:0.55;
-      cursor:default;
-    }
-  </style>
 </head>
-
 <body>
-  <div class="stage">
-    <div class="layout" id="layout">
-      <div class="bgPNG" aria-hidden="true"></div>
 
-      <div class="uiLayer">
-        <!-- Button 1 – KIPP COLOR -->
-        <button id="btnColor" class="squareBtn menu-btn">
-          <span class="startBtnText">KIPP COLOR</span>
-        </button>
+<!-- -------------------- STARTSEITE -------------------- -->
+<div class="startscreen">
+  <img src="digikipp_starts.png" class="start-bg" />
 
-        <!-- Button 2 – KIPP CARD -->
-        <button id="btnCard" class="squareBtn menu-btn">
-          <span class="startBtnText">KIPP CARD</span>
-        </button>
+  <!-- Buttons -->
+  <button class="menu-btn btn-kippcolor">KIPP COLOR</button>
+  <button class="menu-btn btn-kipppcard">KIPP CARD</button>
+  <button class="menu-btn btn-kipppfairy" disabled>KIPP FAIRY</button>
+</div>
 
-        <!-- Button 3 – KIPP FAIRY (inaktiv) -->
-        <button id="btnFairy" class="squareBtn menu-btn fairyBtn" disabled>
-          <span class="startBtnText">KIPP FAIRY</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const HEADER_ROW_OFFSET = 2;
-
-    function numVar(name){
-      return parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue(name)
-      ) || 0;
-    }
-
-    function setScaleToFitWidth(){
-      const cols = numVar("--cols") || 8;
-      const cell = numVar("--cell") || 142;
-
-      const gridW = cols * cell;
-      const vw = window.innerWidth;
-
-      const targetW = vw * 0.94;
-      const scale = Math.min(1, targetW / gridW);
-
-      document.documentElement.style.setProperty("--scale", scale.toFixed(4));
-      document.documentElement.style.setProperty("--gridW", gridW + "px");
-
-      const uiscale = 1 / (scale || 1);
-      document.documentElement.style.setProperty("--uiscale", uiscale.toFixed(4));
-
-      return { cell, scale, gridW };
-    }
-
-    function positionUI(){
-      const cellPx = numVar("--cell") || 142;
-
-      const btnColor = document.getElementById("btnColor");
-      const btnCard  = document.getElementById("btnCard");
-      const btnFairy = document.getElementById("btnFairy");
-
-      // Zeile 10
-      const row10CenterY = (((10 + HEADER_ROW_OFFSET) - 1) * cellPx) + cellPx/2;
-      // Zwischen Zeile 11 und 12 → 11,5
-      const row115CenterY = (((11.5 + HEADER_ROW_OFFSET) - 1) * cellPx) + cellPx/2;
-      // Zeile 13
-      const row13CenterY = (((13 + HEADER_ROW_OFFSET) - 1) * cellPx) + cellPx/2;
-
-      btnColor.style.top = row10CenterY + "px";
-      btnCard.style.top  = row115CenterY + "px";
-      btnFairy.style.top = row13CenterY + "px";
-    }
-
-    function rebuild(){
-      const { cell, scale } = setScaleToFitWidth();
-
-      const vh = window.innerHeight;
-      const effectiveLayoutHeight = vh / (scale || 1);
-      const rows = Math.ceil(effectiveLayoutHeight / cell) + 1;
-      const gridH = rows * cell;
-      document.documentElement.style.setProperty("--gridH", gridH + "px");
-
-      positionUI();
-    }
-
-    window.addEventListener("load", rebuild);
-    window.addEventListener("resize", rebuild);
-
-    // Navigation (falls gewünscht)
-    const btnColor = document.getElementById("btnColor");
-    const btnCard  = document.getElementById("btnCard");
-
-    btnColor.addEventListener("click", () => {
-      // hier den Dateinamen deines Farb-Spiels einsetzen
-      window.location.href = "kippcolor.html";
-    });
-
-    btnCard.addEventListener("click", () => {
-      // später: kippcard.html o.ä.
-      window.location.href = "kippcolor.html";
-    });
-  </script>
 </body>
 </html>
