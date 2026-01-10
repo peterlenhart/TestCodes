@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DIGIKIPP – Schauen & Merken</title>
+  <title>DigiKipp – Schauen & Merken</title>
 
   <style>
     :root{
@@ -608,30 +608,47 @@
       pointer-events: none;
     }
 
-    .kippAnzahlBtns{
+    /* ===== Scrollbares KIPP-ANZAHL Band (1–11) ===== */
+    .kippAnzahlView{
       position: absolute;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       pointer-events: auto;
       z-index: 80;
+      left: 50%;
+      transform: translate(-50%, -50%);
     }
 
-    /* Scrollbares Zahlenband 1–11 */
     .kippBand{
       display: flex;
       gap: calc(10px * var(--uiscale));
       align-items: center;
       justify-content: flex-start;
+      pointer-events: auto;
+
       overflow-x: auto;
       overflow-y: hidden;
       -webkit-overflow-scrolling: touch;
-      padding: calc(6px * var(--uiscale)) calc(8px * var(--uiscale));
+
+      padding: calc(6px * var(--uiscale));
+      border-radius: calc(16px * var(--uiscale));
+
+      /* Breite so, dass gescrollt werden muss */
+      width: calc(6.4 * var(--cell));
       max-width: calc(7 * var(--cell));
-      scrollbar-width: none; /* Firefox */
-      background: rgba(0,0,0,0.00);
+
+      /* sanfte Kante */
+      background: rgba(74,36,24,0.10);
+
+      scroll-snap-type: x mandatory;
+      touch-action: pan-x;
     }
-    .kippBand::-webkit-scrollbar{ display:none; } /* WebKit */
+
+    .kippBand::-webkit-scrollbar{ height: 0px; }
+    .kippBand{ scrollbar-width: none; }
+
+    .kippBand > button{
+      flex: 0 0 auto;
+      scroll-snap-align: center;
+    }
 
     .navBtn{
       position: absolute;
@@ -878,7 +895,7 @@
 
       <div class="uiLayer" id="uiLayer" aria-hidden="true">
         <div class="scoreDisplay" id="scoreDisplay">00</div>
-        <div class="titleLeft" id="titleLeft">DIGIKIPP-COLOR</div>
+        <div class="titleLeft" id="titleLeft">DIGI-KIPP</div>
 
         <div class="hintTitle" id="hintTitle">SCHAUKIPP-RUNDE</div>
 
@@ -898,8 +915,8 @@
           <div class="targetPadNum" id="targetPadNum"></div>
         </button>
 
-        <div id="kippAnzahlView" class="hidden">
-          <div class="kippAnzahlBtns" id="kippAnzahlBtns"></div>
+        <div id="kippAnzahlView" class="hidden kippAnzahlView">
+          <div class="kippBand" id="kippAnzahlBtns"></div>
 
           <button class="squareBtn hidden" id="testTargetBtn" type="button" aria-label="Test Target">
             <span class="anzahlText">T</span>
@@ -1096,10 +1113,10 @@
     let uiMode = "START"; // START | TARGET | COUNT | END
 
     // =========================
-    // Versuche pro Ziel (JETZT NUR 1)
+    // Versuche pro Ziel
     // =========================
     let attemptsForTarget = 0;
-    const MAX_ATTEMPTS_PER_TARGET = 1;
+    const MAX_ATTEMPTS_PER_TARGET = 2;
 
     // =========================
     // NEU: 12 Kippziele + Score nur Treffer
@@ -1211,7 +1228,7 @@
         const borderColor = COLOR_BY_ZF_COORD[zfCoord];
         if(borderColor !== currentTarget.color) continue;
 
-        // Score nur erhöhen, wenn Zahl vorher noch NICHT gelockt war
+        // NEU: Score nur erhöhen, wenn Zahl vorher noch NICHT gelockt war
         const wasAlreadyLocked = lockedColorsByNumber.has(currentTarget.num);
         lockedColorsByNumber.set(currentTarget.num, currentTarget.color);
         applyPersistentFill(si.slotEl, si.num);
@@ -1245,7 +1262,7 @@
 
     let usedNumbers = new Set();
     let drawsCount = 0;
-    const MAX_TARGETS = 12; // 12 Ziele
+    const MAX_TARGETS = 12; // <-- NEU
 
     function resetTargetDeck(){
       usedNumbers = new Set();
@@ -1514,49 +1531,36 @@
       runningKipp = false;
     }
 
-    // ---------- UI: Scrollband 1–11 ----------
+    // ---------- UI: Kippzahl Band (1–11) ----------
     function buildKippAnzahlButtons(){
       kippAnzahlBtns.innerHTML = "";
-      kippAnzahlBtns.classList.remove("compact");
-      kippAnzahlBtns.style.gap = "0px";
 
-      const band = document.createElement("div");
-      band.className = "kippBand";
-      band.setAttribute("role", "group");
-      band.setAttribute("aria-label", "Kipp-Anzahl 1 bis 11");
-
-      for(let num=1; num<=11; num++){
+      for(let num = 1; num <= 11; num++){
         const btn = document.createElement("button");
         btn.className = "squareBtn";
         btn.dataset.anzahl = num;
         btn.type = "button";
         btn.innerHTML = `<span class="anzahlText pulse">${String(num)}</span>`;
         btn.addEventListener("click", () => handleAnzahlClick(num, btn));
-        band.appendChild(btn);
+        kippAnzahlBtns.appendChild(btn);
       }
 
-      kippAnzahlBtns.appendChild(band);
-
-      // optional: mittig starten
-      requestAnimationFrame(() => {
-        try{
-          band.scrollLeft = Math.max(0, (band.scrollWidth - band.clientWidth) / 2);
-        }catch(e){}
-      });
+      // Startposition: Band auf 1 scrollen
+      kippAnzahlBtns.scrollLeft = 0;
     }
 
     function setAnzahlButtonsLocked(locked){
-      kippAnzahlBtns.querySelectorAll("button.squareBtn").forEach(b => b.disabled = locked);
+      kippAnzahlBtns.querySelectorAll("button").forEach(b => b.disabled = locked);
       testTargetBtn.disabled = locked;
       targetPadBtn.disabled = locked;
     }
 
     function markRunSelected(btn){
-      kippAnzahlBtns.querySelectorAll("button.squareBtn").forEach(b => b.classList.remove("runSelected"));
+      kippAnzahlBtns.querySelectorAll("button").forEach(b => b.classList.remove("runSelected"));
       if(btn) btn.classList.add("runSelected");
     }
     function clearRunSelected(){
-      kippAnzahlBtns.querySelectorAll("button.squareBtn").forEach(b => b.classList.remove("runSelected"));
+      kippAnzahlBtns.querySelectorAll("button").forEach(b => b.classList.remove("runSelected"));
     }
 
     // ---------- Zielwahl Reset ----------
@@ -1572,22 +1576,28 @@
     // ---------- End Screen (Schluss Kipprunde) ----------
     function showEndResultView(){
       uiMode = "END";
+      // gleicher Platz wie Start: hint + breiter Button
       startBtnWrap.classList.remove("hidden");
 
+      // Ergebnis-Button zeigen, Start-Button aus
       btnSchauen.classList.add("hidden");
       btnErgebnis.classList.remove("hidden");
 
+      // Hinweise / Controls ausblenden
       kippAnzahlView.classList.add("hidden");
       targetPadBtn.classList.add("hidden");
       showBackIcon(false);
 
+      // Text + Maske
       showHint("SCHLUSS KIPPRUNDE", false);
 
+      // Button initial
       btnErgebnisText.textContent = "ERGEBNIS";
       btnErgebnis.disabled = false;
 
+      // Alles andere inaktiv
       setAnzahlButtonsLocked(true);
-      closeBtn.disabled = false;
+      closeBtn.disabled = false; // darf bleiben
       positionUI();
     }
 
@@ -1595,47 +1605,58 @@
       if(runningKipp) return;
       btnErgebnis.disabled = true;
       btnErgebnisText.textContent = "ERGEBNIS…";
+      // Präsentationskipp: 4 Kipps (wie Vorschau)
       await runSchauKippSequence(4, { kipFactor: 2 });
       btnErgebnisText.textContent = "NEU STARTEN";
       btnErgebnis.disabled = false;
 
+      // Nach Präsentation: Klick => Restart
       btnErgebnis.onclick = () => location.reload();
     }
 
-    // =========================
-    // NUR NOCH 1 VERSUCH:
-    // -> Klick auf Zahl = DER Versuch
-    // -> nach Lauf: Treffer? +1 Punkt, sonst 0
-    // -> in beiden Fällen sofort neues Kippziel
-    // =========================
     function handleAnzahlClick(anzahl, clickedBtn){
       if(!currentTarget) return;
       if(runningKipp) return;
 
+      // NEU: gewählten Button braun markieren, alles sperren
       markRunSelected(clickedBtn);
       setAnzahlButtonsLocked(true);
 
-      attemptsForTarget = 1; // nur informativ (bleibt kompatibel)
+      attemptsForTarget++;
 
       runSchauKippSequence(anzahl, { kipFactor: 1 }).finally(async () => {
         clearHitPulse();
 
         const hit = checkHitAndAnimate();
 
+        // Lauf beendet -> Button wieder beige + alles aktiv (sofern nicht Ende)
         clearRunSelected();
 
+        // Letztes Ziel fertig? (Treffer ODER Fehlkipp nach 2 Versuchen)
         const isLastTarget = (drawsCount >= MAX_TARGETS);
+        const isTargetFinished = hit || (attemptsForTarget >= MAX_ATTEMPTS_PER_TARGET);
 
-        if(isLastTarget){
+        if(isLastTarget && isTargetFinished){
           await sleep(700);
           showEndResultView();
           return;
         }
 
-        await sleep(hit ? 900 : 350);
-        resetToNewTargetChoice();
+        if(hit){
+          await sleep(900);
+          resetToNewTargetChoice();
+          setAnzahlButtonsLocked(false);
+          renderW();
+          return;
+        }
+
+        if(attemptsForTarget >= MAX_ATTEMPTS_PER_TARGET){
+          resetToNewTargetChoice();
+          setAnzahlButtonsLocked(false);
+          return;
+        }
+
         setAnzahlButtonsLocked(false);
-        renderW();
       });
     }
 
@@ -1700,6 +1721,7 @@
     }
 
     function showTargetSelectView(){
+      // wenn 12 Ziele schon gezogen => keine Zielwahl mehr (sollte erst nach Ende passieren)
       if(drawsCount >= MAX_TARGETS){
         showEndResultView();
         return;
@@ -1707,8 +1729,10 @@
 
       uiMode = "TARGET";
 
+      // Hinweis: "Erstes ... von 12" (klein)
       showHint(getTargetHintText(), true);
 
+      // Start/Ergebnis-Button ausblenden (in dieser Phase)
       startBtnWrap.classList.add("hidden");
 
       kippAnzahlView.classList.add("hidden");
@@ -1737,7 +1761,7 @@
       kippAnzahlView.classList.remove("hidden");
       buildKippAnzahlButtons();
 
-      testTargetBtn.classList.add("hidden");
+      testTargetBtn.classList.add("hidden"); // im echten Spiel weg
       testTargetBtn.disabled = true;
 
       showBackIcon(false);
@@ -1801,6 +1825,7 @@
     });
 
     btnErgebnis.addEventListener("click", () => {
+      // in END-View: erstes Mal = Präsentation, danach wird onclick auf reload umgebogen
       runErgebnisPresentation();
     });
 
@@ -1908,14 +1933,16 @@
 
       const kippBtnsCenterY = between10and11;
 
-      kippAnzahlBtns.style.top = kippBtnsCenterY + "px";
-      kippAnzahlBtns.style.left = "50%";
-      kippAnzahlBtns.style.transform = "translate(-50%, -50%)";
+      // Band-Position
+      kippAnzahlView.style.top = kippBtnsCenterY + "px";
+      kippAnzahlView.style.left = "50%";
+      kippAnzahlView.style.transform = "translate(-50%, -50%)";
 
       const uiscale = numVar("--uiscale") || 1;
       const btnH = 44 * uiscale;
       startBtnWrap.style.top = (between10and11 - (btnH / 2)) + "px";
 
+      // Hint-Positionen
       if(uiMode === "TARGET"){
         hintTitle.style.top = row11CenterY + "px";
       } else if(uiMode === "START" || uiMode === "COUNT"){
@@ -1924,6 +1951,7 @@
         const midBetween9and10 = (row9VisualTop + row10VisualTop) / 2;
         hintTitle.style.top = (midBetween9and10 + 40) + "px";
       } else if(uiMode === "END"){
+        // wie START, aber ohne "klein"
         const row9VisualTop  = (((9 + HEADER_ROW_OFFSET) - 1) * cellPx);
         const row10VisualTop = (((10 + HEADER_ROW_OFFSET) - 1) * cellPx);
         const midBetween9and10 = (row9VisualTop + row10VisualTop) / 2;
@@ -2032,6 +2060,7 @@
       showW();
       renderW();
 
+      // Ergebnis-Button wieder normal machen (falls schon benutzt)
       btnErgebnis.onclick = null;
 
       showStartView();
@@ -2048,6 +2077,10 @@
     document.addEventListener("touchmove", (e) => {
       const inRange = e.target && e.target.closest && e.target.closest('input[type="range"]');
       if(inRange) return;
+
+      const inKippBand = e.target && e.target.closest && e.target.closest('#kippAnzahlBtns');
+      if(inKippBand) return;
+
       e.preventDefault();
     }, { passive:false });
   </script>
