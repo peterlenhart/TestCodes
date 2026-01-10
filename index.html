@@ -1,85 +1,53 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>test index</title>
 
-<title>DIGIKIPP – Start</title>
+  <style>
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 40px;
+      background:#f2f2f2;
+      color:#222;
+    }
 
-<style>
-/* -------------------- BASIS -------------------- */
-:root{
-  --beige: #e5d4bd;
-  --inactive: #dcd2c7;
-  --font: Futura, sans-serif;
-}
+    h1{
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
 
-body{
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  background: #000;
-  font-family: var(--font);
-}
+    .linkbox{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
 
-/* -------------------- STARTSCREEN -------------------- */
-.startscreen{
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
-}
+    a{
+      font-size:18px;
+      color:#0059c9;
+      text-decoration:none;
+      background:#fff;
+      padding:12px 16px;
+      border-radius:8px;
+      border:1px solid #ccc;
+      width:max-content;
+      box-shadow:0 2px 5px rgba(0,0,0,0.1);
+    }
 
-.start-bg{
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* -------------------- BUTTONS -------------------- */
-.menu-btn{
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 72%;
-  padding: 18px 0;
-  font-size: 1.4rem;
-  font-family: var(--font);
-  font-weight: 700;
-  border-radius: 14px;
-  border: none;
-  background: var(--beige);
-  color: #000;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.25);
-}
-
-/* Positionierung wie bei deinem Spielraster */
-.btn-kippcolor{ top: 62%; }   /* Zeile 10 */
-.btn-kipppcard{ top: 70%; }   /* Zeile 11/12 */
-.btn-kipppfairy{ top: 78%; }  /* Zeile 13 */
-
-/* -------------------- INAKTIV / COMING SOON -------------------- */
-.btn-kipppfairy{
-  background: var(--inactive);
-  color: #6d6660;
-  opacity: 0.55;
-  box-shadow: none;
-}
-</style>
-
+    a:hover{
+      background:#e8f1ff;
+    }
+  </style>
 </head>
+
 <body>
+  <h1>test index</h1>
 
-<!-- -------------------- STARTSEITE -------------------- -->
-<div class="startscreen">
-  <img src="digikipp_starts.png" class="start-bg" />
-
-  <!-- Buttons -->
-  <button class="menu-btn btn-kippcolor">KIPP COLOR</button>
-  <button class="menu-btn btn-kipppcard">KIPP CARD</button>
-  <button class="menu-btn btn-kipppfairy" disabled>KIPP FAIRY</button>
-</div>
+  <div class="linkbox">
+    <a href="test_pokerschrift.html">test_pokerschrift</a>
+  </div>
 
 </body>
 </html>
