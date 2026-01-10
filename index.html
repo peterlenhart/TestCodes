@@ -1,54 +1,54 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>test index</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Testindex</title>
 
   <style>
     body{
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      margin: 40px;
-      background:#f2f2f2;
-      color:#222;
+      background:#f0f0f0;
+      margin:40px;
+      line-height:1.6;
     }
-
     h1{
-      font-size: 24px;
-      margin-bottom: 20px;
+      font-size:24px;
+      margin-bottom:20px;
     }
-
-    .linkbox{
-      display:flex;
-      flex-direction:column;
-      gap:14px;
-    }
-
-    a{
-      font-size:18px;
-      color:#0059c9;
-      text-decoration:none;
-      background:#fff;
-      padding:12px 16px;
-      border-radius:8px;
+    .testlink{
+      display:block;
+      padding:10px 14px;
+      margin-bottom:10px;
+      background:#ffffff;
       border:1px solid #ccc;
-      width:max-content;
-      box-shadow:0 2px 5px rgba(0,0,0,0.1);
+      border-radius:8px;
+      text-decoration:none;
+      color:#333;
+      font-weight:600;
+      width:320px;
     }
-
-    a:hover{
-      background:#e8f1ff;
+    .testlink:hover{
+      background:#e8e8e8;
     }
   </style>
 </head>
 
 <body>
-  <h1>test index</h1>
 
-  <div class="linkbox">
-    <!-- GENAU SO: pokerschrift_test.html -->
-    <a href="pokerschrift_test.html">pokerschrift_test</a>
-  </div>
+  <h1>Test-Seiten</h1>
+
+  <!-- Poker-Schrift Tests -->
+  <a class="testlink" href="pokerschrift_test.html">pokerschrift_test</a>
+  <a class="testlink" href="pokerschrift_test02.html">pokerschrift_test02</a>
+  <a class="testlink" href="pokerschrift_test03.html">pokerschrift_test03</a>
+  <a class="testlink" href="pokerschrift_test04.html">pokerschrift_test04</a>
+
+  <!-- Platz für zukünftige Tests -->
+  <h1>Weitere Tests</h1>
+  <a class="testlink" href="scrollband_test.html">scrollband_test</a>
+  <a class="testlink" href="würfel_font_test.html">würfel_font_test</a>
+  <a class="testlink" href="kippgeschwindigkeit_test.html">kippgeschwindigkeit_test</a>
 
 </body>
 </html>
