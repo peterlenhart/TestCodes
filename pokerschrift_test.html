@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pokerschrift_test</title>
+
+  <!-- Poker-Kartenschrift: Noto Serif (beste Web-Serif für Kartenoptik) -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    body{
+      background:#f2f2f2;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      padding:30px;
+      color:#222;
+    }
+
+    h1{
+      font-size:26px;
+      margin-bottom:25px;
+    }
+
+    .cardbox{
+      background:#ffffff;
+      padding:25px;
+      border-radius:14px;
+      border:1px solid #ccc;
+      box-shadow:0 4px 12px rgba(0,0,0,0.12);
+      width:260px;
+      margin-bottom:35px;
+    }
+
+    .value{
+      font-family:'Noto Serif', serif;
+      font-size:48px;
+      font-weight:700;
+      text-align:center;
+      margin-bottom:10px;
+    }
+
+    .suit{
+      font-family:'Noto Serif', serif;
+      font-size:40px;
+      text-align:center;
+      margin-top:-5px;
+    }
+
+    .red{ color:#c00000; }
+    .black{ color:#000; }
+
+    .hr{
+      height:1px;
+      background:#ddd;
+      margin:30px 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Test: Poker-Kartenschrift</h1>
+
+  <!-- ASS HERZ -->
+  <div class="cardbox">
+    <div class="value red">A</div>
+    <div class="suit red">♥</div>
+  </div>
+
+  <!-- KÖNIG PIK -->
+  <div class="cardbox">
+    <div class="value black">K</div>
+    <div class="suit black">♠</div>
+  </div>
+
+  <!-- DAME KARO -->
+  <div class="cardbox">
+    <div class="value red">Q</div>
+    <div class="suit red">♦</div>
+  </div>
+
+  <!-- BUBE KREUZ -->
+  <div class="cardbox">
+    <div class="value black">J</div>
+    <div class="suit black">♣</div>
+  </div>
+
+  <div class="hr"></div>
+
+  <!-- ZEHLER-TEST -->
+  <div class="cardbox">
+    <div class="value black">10</div>
+    <div class="suit black">♠</div>
+  </div>
+
+  <div class="cardbox">
+    <div class="value red">7</div>
+    <div class="suit red">♦</div>
+  </div>
+
+</body>
+</html>
