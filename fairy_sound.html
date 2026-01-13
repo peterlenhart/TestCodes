@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>FAIRY SOUND – Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:#f0f0f0;
+      padding:20px;
+      line-height:1.6;
+    }
+    h1{ font-size:24px; margin-bottom:16px; }
+
+    button{
+      padding:12px 18px;
+      font-size:1rem;
+      border:none;
+      border-radius:10px;
+      cursor:pointer;
+      background:#ffb22e;
+      color:#2a160c;
+      font-weight:700;
+    }
+    button:active{
+      transform:scale(0.97);
+    }
+
+    #storyBox{
+      margin-top:20px;
+      padding:16px;
+      border-radius:12px;
+      background:white;
+      border:1px solid #ccc;
+      min-height:120px;
+      font-size:1.2rem;
+      white-space:pre-wrap;
+    }
+
+    #audioBtn{
+      margin-top:14px;
+      background:#41a96f;
+      color:white;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>FAIRY SOUND – Testseite</h1>
+
+  <button id="newFairy">Neue Fairy-Geschichte</button>
+
+  <div id="storyBox">Noch keine Geschichte generiert.</div>
+
+  <button id="audioBtn" style="display:none;">🔊 Geschichte anhören</button>
+
+  <audio id="ttsPlayer"></audio>
+
+<script>
+/* ---------------------------------------------------
+   ⭐ KONFIGURATION – HIER DEIN API-KEY EINTRAGEN
+--------------------------------------------------- */
+const OPENAI_API_KEY = "";   // <<< HIER DEIN OPENAI KEY EINSETZEN !!!
+
+/* ---------------------------------------------------
+   MOTIVE – exakt wie in FAIRY KIPP
+--------------------------------------------------- */
+const motifs = [
+  "Wasserball", "Auto", "Farbfleck", "Buch",
+  "Gießkanne", "Kerze", "Blume", "Fisch",
+  "Schmetterling", "Schuh", "Tasse", "T-Shirt"
+];
+
+const colors = ["grüne", "blaue", "violette", "orangefarbene"];
+
+/* ---------------------------------------------------
+   ELEMENTE
+--------------------------------------------------- */
+const storyBox   = document.getElementById("storyBox");
+const newFairy   = document.getElementById("newFairy");
+const audioBtn   = document.getElementById("audioBtn");
+const ttsPlayer  = document.getElementById("ttsPlayer");
+
+let lastStoryText = "";
+
+/* ---------------------------------------------------
+   NEUE FAIRY GESCHICHTE GENERIEREN
+--------------------------------------------------- */
+async function generateFairyStory(){
+  storyBox.textContent = "… KI schreibt eine neue Fairy-Geschichte …";
+
+  const motif  = motifs[Math.floor(Math.random()*motifs.length)];
+  const color  = colors[Math.floor(Math.random()*colors.length)];
+
+  const prompt = `
+Schreibe eine sehr kurze, märchenhafte 3-Satz-Geschichte.
+Satz 1: neutral, ohne Hinweis auf Motiv.
+Satz 2: subtile Hinweise, aber ohne Nennung des Motivs.
+Satz 3: klare Auflösung – Ende mit " ${color} ${motif}".
+Nüchterner, ruhiger Märchenerzähl-Stil.
+`;
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer " + OPENAI_API_KEY
+    },
+    body: JSON.stringify({
+      model: "gpt-4.1-mini",
+      messages: [{ role:"user", content: prompt }]
+    })
+  });
+
+  const data = await response.json();
+  let text = data.choices?.[0]?.message?.content?.trim() || "Fehler – keine Antwort";
+
+  storyBox.textContent = text;
+  lastStoryText = text;
+  audioBtn.style.display = "inline-block";
+}
+
+/* ---------------------------------------------------
+   TEXT → SPRACHAUDIO GENERIEREN
+--------------------------------------------------- */
+async function playFairyTTS(){
+  if (!lastStoryText) return;
+
+  audioBtn.textContent = "🔊 Lade Audio …";
+
+  const request = await fetch("https://api.openai.com/v1/audio/speech", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer " + OPENAI_API_KEY
+    },
+    body: JSON.stringify({
+      model:"gpt-4o-mini-tts",
+      voice:"alloy",            // weibliche Erzählerinnen-Stimme bleibt möglich (du kannst MIMI nehmen)
+      input: lastStoryText
+    })
+  });
+
+  const arrayBuffer = await request.arrayBuffer();
+  const blob = new Blob([arrayBuffer], { type: "audio/mpeg" });
+  const url = URL.createObjectURL(blob);
+
+  ttsPlayer.src = url;
+  ttsPlayer.play();
+
+  audioBtn.textContent = "🔊 Geschichte anhören";
+}
+
+/* ---------------------------------------------------
+   EVENTS
+--------------------------------------------------- */
+newFairy.addEventListener("click", generateFairyStory);
+audioBtn.addEventListener("click", playFairyTTS);
+
+</script>
+
+</body>
+</html>
