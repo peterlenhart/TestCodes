@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CUBE BOX - Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(180deg, #d9c3a2, #cdb28f);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 64px;
+      color: #4a2418;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      margin-bottom: 60px;
+      text-align: center;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(0,0,0,0.05)), #ead7be;
+      color: #2a160c;
+      border: 3px solid rgba(0,0,0,0.35);
+      border-radius: 12px;
+      padding: 24px 48px;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .info {
+      margin-top: 40px;
+      color: #4a2418;
+      font-size: 18px;
+      text-align: center;
+      max-width: 500px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <h1>CUBE BOX</h1>
+  
+  <a href="3d-test.html" class="btn">
+    DREHEN, SCHAUEN, MERKEN
+  </a>
+
+  <div class="info">
+    Ein Würfel kippt in der Box von Ecke zu Ecke.<br>
+    Merke dir alle 12 Zahlen auf den 6 Seiten!
+  </div>
+</body>
+</html>
