@@ -136,7 +136,7 @@
     console.log('Random Deck (keine Wiederholung):', randomDeck);
 
     // Create texture for each face with 4 numbers (2x2 grid)
-    function createFaceTexture(numbers) {
+    function createFaceTexture(numbers, faceIndex) {
       const canvas = document.createElement('canvas');
       canvas.width = 512;
       canvas.height = 512;
@@ -159,6 +159,13 @@
         ctx.lineTo(Math.random() * 512, 512);
         ctx.stroke();
       }
+
+      // Draw Face Index in top-left corner for debugging
+      ctx.fillStyle = 'red';
+      ctx.font = 'bold 40px system-ui';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`F${faceIndex}`, 10, 10);
 
       // Draw 2x2 grid
       ctx.strokeStyle = 'rgba(122, 74, 52, 0.4)';
@@ -190,7 +197,12 @@
       ];
 
       numbers.forEach((num, i) => {
-        const text = (num === 9 || num === 6) ? `${num}.` : String(num);
+        let text;
+        if (num === 'X') {
+          text = ''; // Leeres Feld für nicht-sichtbare Faces
+        } else {
+          text = (num === 9 || num === 6) ? `${num}.` : String(num);
+        }
         ctx.fillText(text, positions[i][0], positions[i][1]);
       });
 
@@ -199,24 +211,26 @@
       return texture;
     }
 
-    // Distribute 8 unique random numbers ONLY to the 2 visible faces when tilting Süd-Nord
-    // Nur Face 0 (Süd) und Face 1 (Nord) sind beim vertikalen Kippen sichtbar
-    // JEDE der 8 Zahlen ist einzigartig, keine Wiederholung!
+    // Face 5 und Face 2 sind beim Süd-Nord-Kippen sichtbar (siehe Screenshot)
+    // Diese bekommen die 8 Random-Zahlen ohne Wiederholung!
     const faceNumbers = [
-      [randomDeck[0], randomDeck[1], randomDeck[2], randomDeck[3]],       // Face 0 (Süd) - 4 einzigartige Zahlen
-      [randomDeck[4], randomDeck[5], randomDeck[6], randomDeck[7]],       // Face 1 (Nord) - 4 weitere einzigartige Zahlen
-      [99, 99, 99, 99],                                                    // Face 2 (top) - nicht sichtbar beim Süd-Nord-Kippen
-      [99, 99, 99, 99],                                                    // Face 3 (bottom) - nicht sichtbar
-      [99, 99, 99, 99],                                                    // Face 4 (right) - nicht sichtbar
-      [99, 99, 99, 99]                                                     // Face 5 (left) - nicht sichtbar
+      ['X', 'X', 'X', 'X'],                                               // Face 0 - nicht sichtbar beim Süd-Nord-Kippen
+      ['X', 'X', 'X', 'X'],                                               // Face 1 - nicht sichtbar
+      [randomDeck[4], randomDeck[5], randomDeck[6], randomDeck[7]],       // Face 2 (Nord nach Kippen) - 4 Random-Zahlen
+      ['X', 'X', 'X', 'X'],                                               // Face 3 - nicht sichtbar
+      ['X', 'X', 'X', 'X'],                                               // Face 4 - nicht sichtbar
+      [randomDeck[0], randomDeck[1], randomDeck[2], randomDeck[3]]        // Face 5 (Süd Ausgangsposition) - 4 Random-Zahlen
     ];
     
-    console.log('8 einzigartige Zahlen (Face 0 Süd + Face 1 Nord):', [...faceNumbers[0], ...faceNumbers[1]]);
+    console.log('8 Random-Zahlen ohne Wiederholung (F5 Süd + F2 Nord):', [
+      ...faceNumbers[5], 
+      ...faceNumbers[2]
+    ]);
 
-    // Create materials for each face
-    const materials = faceNumbers.map(numbers => 
+    // Create materials for each face (mit Face-Index für Debugging)
+    const materials = faceNumbers.map((numbers, index) => 
       new THREE.MeshStandardMaterial({
-        map: createFaceTexture(numbers),
+        map: createFaceTexture(numbers, index),
         roughness: 0.7,
         metalness: 0.1
       })
@@ -233,7 +247,7 @@
     // Würfel liegt auf horizontaler Bodenkante (West-Ost)
     const edgeOffset = Math.sqrt(2);
     cube.position.y = edgeOffset; // Kante am Boden
-    cube.position.z = 0; // Zentral (eine Würfelkantenlänge nach Norden verschoben)
+    cube.position.z = 0; // Zentral
     
     // Rotate cube 45° around X-axis so it rests on horizontal edge
     cube.rotation.x = Math.PI / 4; // 45° - liegt auf Kante
