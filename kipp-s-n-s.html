@@ -3,9 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kipp Test - Süd/Nord + Südwest/Südost - CUBE BOX</title>
+  <title>Kipp Test - Süd/Nord - CUBE BOX</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -14,7 +18,11 @@
       touch-action: none;
     }
 
-    #container { width: 100vw; height: 100vh; position: relative; }
+    #container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
 
     #info {
       position: absolute;
@@ -31,8 +39,15 @@
       pointer-events: none;
     }
 
-    #info h2 { font-size: 22px; margin-bottom: 8px; }
-    #info p  { font-size: 15px; opacity: 0.85; line-height: 1.2; }
+    #info h2 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    #info p {
+      font-size: 16px;
+      opacity: 0.8;
+    }
 
     #backBtn {
       position: absolute;
@@ -62,14 +77,10 @@
 </head>
 <body>
   <div id="container"></div>
-
+  
   <div id="info">
-    <h2>Kippe den Würfel</h2>
-    <p>
-      Vertikal wischen: <b>Süd ↔ Nord</b><br>
-      Horizontal wischen: <b>Südwest ↔ Südost</b><br>
-      (Achse wird beim Wisch gelockt → kein Diagonal-Kippen)
-    </p>
+    <h2>Kippe den Würfel vertikal (Süd ↔ Nord)</h2>
+    <p>Swipe nach oben/unten um die Bodenkante</p>
   </div>
 
   <a href="testindex.html" id="backBtn">WÜRFEL IN DIE BOX</a>
@@ -90,8 +101,8 @@
       0.1,
       1000
     );
-    camera.position.set(0, 11, 0);
-    camera.lookAt(0, -1.5, 0);
+    camera.position.set(0, 11, 0); // Über Szene
+    camera.lookAt(0, -1.5, 0); // Schaut weiter nach unten, um Würfel in untere Hälfte zu verschieben
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -106,10 +117,14 @@
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
 
-    // Create random deck of 1-12 (no duplicates)
+    // Create random deck of 1-12 (no duplicates, each number appears only once)
     function createUniqueRandomDeck() {
       const deck = [];
-      for (let i = 1; i <= 12; i++) deck.push(i);
+      // Add numbers 1-12 once
+      for (let i = 1; i <= 12; i++) {
+        deck.push(i);
+      }
+      // Fisher-Yates shuffle
       for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -118,7 +133,7 @@
     }
 
     const randomDeck = createUniqueRandomDeck();
-    console.log('Random Deck (1-12, keine Wiederholung):', randomDeck);
+    console.log('Random Deck (keine Wiederholung):', randomDeck);
 
     // Create texture for each face with 4 numbers (2x2 grid)
     function createFaceTexture(numbers, faceIndex) {
@@ -145,44 +160,46 @@
         ctx.stroke();
       }
 
-      // Debug face index
+      // Draw Face Index in top-left corner for debugging
       ctx.fillStyle = 'red';
       ctx.font = 'bold 40px system-ui';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillText(`F${faceIndex}`, 10, 10);
 
-      // 2x2 grid
+      // Draw 2x2 grid
       ctx.strokeStyle = 'rgba(122, 74, 52, 0.4)';
       ctx.lineWidth = 4;
-
+      
+      // Vertical line
       ctx.beginPath();
       ctx.moveTo(256, 32);
       ctx.lineTo(256, 480);
       ctx.stroke();
-
+      
+      // Horizontal line
       ctx.beginPath();
       ctx.moveTo(32, 256);
       ctx.lineTo(480, 256);
       ctx.stroke();
 
-      // Numbers
+      // Draw numbers in 2x2 grid
       ctx.fillStyle = '#2a160c';
       ctx.font = 'bold 120px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
       const positions = [
-        [128, 128],
-        [384, 128],
-        [128, 384],
-        [384, 384]
+        [128, 128],  // Top-left (Viertel 1)
+        [384, 128],  // Top-right (Viertel 2)
+        [128, 384],  // Bottom-left (Viertel 3)
+        [384, 384]   // Bottom-right (Viertel 4)
       ];
 
       numbers.forEach((num, i) => {
         let text;
         if (num === 'X') {
-          text = '';
+          text = ''; // Leeres Feld für nicht-sichtbare Faces
         } else {
           text = (num === 9 || num === 6) ? `${num}.` : String(num);
         }
@@ -194,26 +211,24 @@
       return texture;
     }
 
-    /*
-      Zahlenverteilung:
-      - Face 5 (Süd) + Face 2 (Nord) sichtbar beim Vertikal-Kippen
-      - Face 5 (Süd) + Face 0 (Seitenpartner) sichtbar beim Horizontal-Kippen
-      (Falls bei dir beim Horizontal-Kippen ein anderes Face sichtbar ist, sag kurz welches F# es ist.)
-    */
+    // Face 5 und Face 2 sind beim Süd-Nord-Kippen sichtbar (siehe Screenshot)
+    // Diese bekommen die 8 Random-Zahlen ohne Wiederholung!
     const faceNumbers = [
-      [randomDeck[8],  randomDeck[9],  randomDeck[10], randomDeck[11]], // Face 0 (Seitenpartner)
-      ['X', 'X', 'X', 'X'],                                             // Face 1
-      [randomDeck[4],  randomDeck[5],  randomDeck[6],  randomDeck[7]],  // Face 2 (Nord)
-      ['X', 'X', 'X', 'X'],                                             // Face 3
-      ['X', 'X', 'X', 'X'],                                             // Face 4
-      [randomDeck[0],  randomDeck[1],  randomDeck[2],  randomDeck[3]]   // Face 5 (Süd)
+      ['X', 'X', 'X', 'X'],                                               // Face 0 - nicht sichtbar beim Süd-Nord-Kippen
+      ['X', 'X', 'X', 'X'],                                               // Face 1 - nicht sichtbar
+      [randomDeck[4], randomDeck[5], randomDeck[6], randomDeck[7]],       // Face 2 (Nord nach Kippen) - 4 Random-Zahlen
+      ['X', 'X', 'X', 'X'],                                               // Face 3 - nicht sichtbar
+      ['X', 'X', 'X', 'X'],                                               // Face 4 - nicht sichtbar
+      [randomDeck[0], randomDeck[1], randomDeck[2], randomDeck[3]]        // Face 5 (Süd Ausgangsposition) - 4 Random-Zahlen
     ];
+    
+    console.log('8 Random-Zahlen ohne Wiederholung (F5 Süd + F2 Nord):', [
+      ...faceNumbers[5], 
+      ...faceNumbers[2]
+    ]);
 
-    console.log('Face 5 (Süd):', faceNumbers[5]);
-    console.log('Face 2 (Nord):', faceNumbers[2]);
-    console.log('Face 0 (Seite):', faceNumbers[0]);
-
-    const materials = faceNumbers.map((numbers, index) =>
+    // Create materials for each face (mit Face-Index für Debugging)
+    const materials = faceNumbers.map((numbers, index) => 
       new THREE.MeshStandardMaterial({
         map: createFaceTexture(numbers, index),
         roughness: 0.7,
@@ -221,53 +236,45 @@
       })
     );
 
-    // Cube
+    // Create cube
     const geometry = new THREE.BoxGeometry(2, 2, 2);
     const cube = new THREE.Mesh(geometry, materials);
-
-    // Pivot group
+    
+    // Create pivot group for rotation around bottom edge
     const pivotGroup = new THREE.Group();
     scene.add(pivotGroup);
-
-    // Würfel liegt auf horizontaler Bodenkante
+    
+    // Würfel liegt auf horizontaler Bodenkante (West-Ost)
     const edgeOffset = Math.sqrt(2);
-    cube.position.y = edgeOffset;
-    cube.position.z = 0;
-
-    // Liegt auf Kante
-    cube.rotation.x = Math.PI / 4;
-
+    cube.position.y = edgeOffset; // Kante am Boden
+    cube.position.z = 0; // Zentral
+    
+    // Rotate cube 45° around X-axis so it rests on horizontal edge
+    cube.rotation.x = Math.PI / 4; // 45° - liegt auf Kante
+    
     pivotGroup.add(cube);
+    
+    // Startposition SÜD: pivot bei +45° (Würfel liegt flach nach Süden)
+    pivotGroup.rotation.x = Math.PI / 4; // +45° 
 
-    // Startposition: SÜD (X = +45°), Y = 0 (Südwest/Südost neutral)
-    pivotGroup.rotation.x = Math.PI / 4;
-    pivotGroup.rotation.y = 0;
-
-    // Rotation controls
+    // Manual rotation controls (only vertical movement)
     let isDragging = false;
-    let startX = 0, startY = 0;
-    let prevX = 0, prevY = 0;
-
-    // Achsen-Lock damit nie diagonal
-    let axisLock = null; // 'x' oder 'y' oder null
-    const lockThreshold = 10; // px
-
-    let rotationVelocityX = 0;
-    let rotationVelocityY = 0;
-
-    // Pinch-to-zoom
+    let previousMouseY = 0;
+    let rotationVelocity = 0;
+    
+    // Pinch-to-zoom variables
     let isPinching = false;
     let previousPinchDistance = 0;
     let currentFrustumSize = frustumSize;
-    const minFrustumSize = 2;
-    const maxFrustumSize = 10;
+    const minFrustumSize = 2;  // Max zoom in
+    const maxFrustumSize = 10; // Max zoom out
 
-    function getDistance(t1, t2) {
-      const dx = t2.clientX - t1.clientX;
-      const dy = t2.clientY - t1.clientY;
+    function getDistance(touch1, touch2) {
+      const dx = touch2.clientX - touch1.clientX;
+      const dy = touch2.clientY - touch1.clientY;
       return Math.sqrt(dx * dx + dy * dy);
     }
-
+    
     function updateCameraZoom() {
       const aspect = window.innerWidth / window.innerHeight;
       camera.left = currentFrustumSize * aspect / -2;
@@ -277,95 +284,71 @@
       camera.updateProjectionMatrix();
     }
 
-    function beginDrag(x, y) {
+    function onMouseDown(e) {
       isDragging = true;
-      axisLock = null;
-      startX = prevX = x;
-      startY = prevY = y;
+      previousMouseY = e.clientY || e.touches[0].clientY;
     }
 
-    function dragMove(x, y) {
+    function onMouseMove(e) {
       if (!isDragging) return;
 
-      const dxTotal = x - startX;
-      const dyTotal = y - startY;
+      const currentY = e.clientY || e.touches[0].clientY;
+      const deltaY = currentY - previousMouseY;
 
-      // Lock bestimmen (nur einmal pro Drag)
-      if (!axisLock) {
-        const adx = Math.abs(dxTotal);
-        const ady = Math.abs(dyTotal);
-        if (adx > lockThreshold || ady > lockThreshold) {
-          axisLock = (adx > ady) ? 'y' : 'x';  // horizontal -> Y, vertikal -> X
-        } else {
-          return;
-        }
-      }
+      // Swipe nach oben (deltaY negativ) → Würfel kippt nach Norden
+      rotationVelocity = deltaY * 0.005;
 
-      const dx = x - prevX;
-      const dy = y - prevY;
-
-      // Vertikal (dy) → X-Rotation (S↔N)
-      if (axisLock === 'x') {
-        rotationVelocityX = dy * 0.005;
-        rotationVelocityY *= 0.85;
-      }
-
-      // Horizontal (dx) → Y-Rotation (SW↔SE)
-      if (axisLock === 'y') {
-        rotationVelocityY = dx * 0.005;
-        rotationVelocityX *= 0.85;
-      }
-
-      prevX = x;
-      prevY = y;
+      previousMouseY = currentY;
     }
 
-    function endDrag() {
+    function onMouseUp() {
       isDragging = false;
-      axisLock = null;
     }
-
-    // Mouse
-    function onMouseDown(e) { beginDrag(e.clientX, e.clientY); }
-    function onMouseMove(e) { dragMove(e.clientX, e.clientY); }
-    function onMouseUp() { endDrag(); }
-
-    // Touch
+    
     function onTouchStart(e) {
       if (e.touches.length === 2) {
+        // Zwei Finger: Pinch-Zoom
         isPinching = true;
         isDragging = false;
-        axisLock = null;
         previousPinchDistance = getDistance(e.touches[0], e.touches[1]);
         e.preventDefault();
       } else if (e.touches.length === 1) {
+        // Ein Finger: Rotation
         isPinching = false;
-        beginDrag(e.touches[0].clientX, e.touches[0].clientY);
+        onMouseDown(e);
       }
     }
 
     function onTouchMove(e) {
       if (isPinching && e.touches.length === 2) {
+        // Pinch-Zoom
         const currentDistance = getDistance(e.touches[0], e.touches[1]);
         const delta = previousPinchDistance - currentDistance;
-
+        
+        // Zoom: größere Distanz = kleiner frustumSize = näher
         currentFrustumSize += delta * 0.01;
         currentFrustumSize = Math.max(minFrustumSize, Math.min(maxFrustumSize, currentFrustumSize));
+        
         updateCameraZoom();
-
+        
         previousPinchDistance = currentDistance;
         e.preventDefault();
       } else if (!isPinching && e.touches.length === 1) {
-        dragMove(e.touches[0].clientX, e.touches[0].clientY);
+        // Rotation
+        onMouseMove(e);
       }
     }
 
     function onTouchEnd(e) {
-      if (e.touches.length < 2) isPinching = false;
-      if (e.touches.length === 0) endDrag();
+      if (e.touches.length < 2) {
+        isPinching = false;
+      }
+      if (e.touches.length === 0) {
+        isDragging = false;
+      }
     }
 
-    // Listeners
+    // Event listeners
     renderer.domElement.addEventListener('mousedown', onMouseDown);
     renderer.domElement.addEventListener('mousemove', onMouseMove);
     renderer.domElement.addEventListener('mouseup', onMouseUp);
@@ -374,8 +357,8 @@
     renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
     renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
     renderer.domElement.addEventListener('touchend', onTouchEnd);
-
-    // Wheel zoom (Desktop)
+    
+    // Mouse wheel zoom (Desktop)
     renderer.domElement.addEventListener('wheel', (e) => {
       e.preventDefault();
       currentFrustumSize += e.deltaY * 0.01;
@@ -387,30 +370,31 @@
     function animate() {
       requestAnimationFrame(animate);
 
-      // Apply velocities
-      pivotGroup.rotation.x += rotationVelocityX;
-      pivotGroup.rotation.y += rotationVelocityY;
+      // Apply rotation velocity (only around X-axis = horizontal edge)
+      pivotGroup.rotation.x += rotationVelocity;
 
-      // LIMITS: jeweils -45° .. +45°
-      const minRot = -Math.PI / 4;
-      const maxRot =  Math.PI / 4;
+      // LIMIT: Würfel darf nur zwischen -45° (Nord) und +45° (Süd) kippen
+      const minRotation = -Math.PI / 4; // -45° = Nord
+      const maxRotation = Math.PI / 4;  // +45° = Süd
+      
+      if (pivotGroup.rotation.x < minRotation) {
+        pivotGroup.rotation.x = minRotation;
+        rotationVelocity = 0; // Stop momentum
+      }
+      if (pivotGroup.rotation.x > maxRotation) {
+        pivotGroup.rotation.x = maxRotation;
+        rotationVelocity = 0; // Stop momentum
+      }
 
-      if (pivotGroup.rotation.x < minRot) { pivotGroup.rotation.x = minRot; rotationVelocityX = 0; }
-      if (pivotGroup.rotation.x > maxRot) { pivotGroup.rotation.x = maxRot; rotationVelocityX = 0; }
-
-      if (pivotGroup.rotation.y < minRot) { pivotGroup.rotation.y = minRot; rotationVelocityY = 0; }
-      if (pivotGroup.rotation.y > maxRot) { pivotGroup.rotation.y = maxRot; rotationVelocityY = 0; }
-
-      // Damping
-      rotationVelocityX *= 0.95;
-      rotationVelocityY *= 0.95;
+      // Damping (slow down over time)
+      rotationVelocity *= 0.95;
 
       renderer.render(scene, camera);
     }
 
     animate();
 
-    // Resize
+    // Handle window resize
     window.addEventListener('resize', () => {
       const aspect = window.innerWidth / window.innerHeight;
       camera.left = currentFrustumSize * aspect / -2;
