@@ -68,7 +68,7 @@
     <p>
       Vertikal wischen: <b>Süd ↔ Nord</b><br>
       Horizontal wischen: <b>Südwest ↔ Südost</b><br>
-      (Achse wird beim Wisch gelockt → immer nur 2 Flächen sichtbar)
+      (Achse wird beim Wisch gelockt → kein Diagonal-Kippen)
     </p>
   </div>
 
@@ -195,24 +195,23 @@
     }
 
     /*
-      NEU: 12 Zahlen werden auf 3 Faces verteilt (je 4 Zahlen), damit:
-      - Süd/Nord-Kippen: Face 5 + Face 2 sichtbar
-      - Südwest/Südost-Kippen: Face 5 + Face 0 sichtbar
-      (Face 5 ist die gemeinsame Süd-Ausgangsfläche)
+      Zahlenverteilung:
+      - Face 5 (Süd) + Face 2 (Nord) sichtbar beim Vertikal-Kippen
+      - Face 5 (Süd) + Face 0 (Seitenpartner) sichtbar beim Horizontal-Kippen
+      (Falls bei dir beim Horizontal-Kippen ein anderes Face sichtbar ist, sag kurz welches F# es ist.)
     */
     const faceNumbers = [
-      [randomDeck[8],  randomDeck[9],  randomDeck[10], randomDeck[11]], // Face 0 (Partner für SW↔SE)
-      ['X', 'X', 'X', 'X'],                                             // Face 1 - nicht benutzt
-      [randomDeck[4],  randomDeck[5],  randomDeck[6],  randomDeck[7]],  // Face 2 (Partner für S↔N)
-      ['X', 'X', 'X', 'X'],                                             // Face 3 - nicht benutzt
-      ['X', 'X', 'X', 'X'],                                             // Face 4 - nicht benutzt
+      [randomDeck[8],  randomDeck[9],  randomDeck[10], randomDeck[11]], // Face 0 (Seitenpartner)
+      ['X', 'X', 'X', 'X'],                                             // Face 1
+      [randomDeck[4],  randomDeck[5],  randomDeck[6],  randomDeck[7]],  // Face 2 (Nord)
+      ['X', 'X', 'X', 'X'],                                             // Face 3
+      ['X', 'X', 'X', 'X'],                                             // Face 4
       [randomDeck[0],  randomDeck[1],  randomDeck[2],  randomDeck[3]]   // Face 5 (Süd)
     ];
 
-    console.log('Faces mit Zahlen:');
     console.log('Face 5 (Süd):', faceNumbers[5]);
-    console.log('Face 2 (Nord-Partner):', faceNumbers[2]);
-    console.log('Face 0 (SW/SE-Partner):', faceNumbers[0]);
+    console.log('Face 2 (Nord):', faceNumbers[2]);
+    console.log('Face 0 (Seite):', faceNumbers[0]);
 
     const materials = faceNumbers.map((numbers, index) =>
       new THREE.MeshStandardMaterial({
@@ -240,21 +239,21 @@
 
     pivotGroup.add(cube);
 
-    // Startposition SÜD (X = +45°), Z = 0 (Südwest/Südost neutral)
+    // Startposition: SÜD (X = +45°), Y = 0 (Südwest/Südost neutral)
     pivotGroup.rotation.x = Math.PI / 4;
-    pivotGroup.rotation.z = 0;
+    pivotGroup.rotation.y = 0;
 
     // Rotation controls
     let isDragging = false;
     let startX = 0, startY = 0;
     let prevX = 0, prevY = 0;
 
-    // Achsen-Lock damit nie diagonal (immer nur 2 Faces sichtbar)
-    let axisLock = null; // 'x' oder 'z' oder null
-    const lockThreshold = 10; // px, ab wann gelockt wird
+    // Achsen-Lock damit nie diagonal
+    let axisLock = null; // 'x' oder 'y' oder null
+    const lockThreshold = 10; // px
 
     let rotationVelocityX = 0;
-    let rotationVelocityZ = 0;
+    let rotationVelocityY = 0;
 
     // Pinch-to-zoom
     let isPinching = false;
@@ -296,9 +295,9 @@
         const adx = Math.abs(dxTotal);
         const ady = Math.abs(dyTotal);
         if (adx > lockThreshold || ady > lockThreshold) {
-          axisLock = (adx > ady) ? 'z' : 'x';
+          axisLock = (adx > ady) ? 'y' : 'x';  // horizontal -> Y, vertikal -> X
         } else {
-          return; // noch zu wenig Bewegung
+          return;
         }
       }
 
@@ -308,12 +307,12 @@
       // Vertikal (dy) → X-Rotation (S↔N)
       if (axisLock === 'x') {
         rotationVelocityX = dy * 0.005;
-        rotationVelocityZ *= 0.85; // kleines Ausbremsen der anderen Achse
+        rotationVelocityY *= 0.85;
       }
 
-      // Horizontal (dx) → Z-Rotation (SW↔SE)
-      if (axisLock === 'z') {
-        rotationVelocityZ = dx * 0.005;
+      // Horizontal (dx) → Y-Rotation (SW↔SE)
+      if (axisLock === 'y') {
+        rotationVelocityY = dx * 0.005;
         rotationVelocityX *= 0.85;
       }
 
@@ -390,7 +389,7 @@
 
       // Apply velocities
       pivotGroup.rotation.x += rotationVelocityX;
-      pivotGroup.rotation.z += rotationVelocityZ;
+      pivotGroup.rotation.y += rotationVelocityY;
 
       // LIMITS: jeweils -45° .. +45°
       const minRot = -Math.PI / 4;
@@ -398,12 +397,13 @@
 
       if (pivotGroup.rotation.x < minRot) { pivotGroup.rotation.x = minRot; rotationVelocityX = 0; }
       if (pivotGroup.rotation.x > maxRot) { pivotGroup.rotation.x = maxRot; rotationVelocityX = 0; }
-      if (pivotGroup.rotation.z < minRot) { pivotGroup.rotation.z = minRot; rotationVelocityZ = 0; }
-      if (pivotGroup.rotation.z > maxRot) { pivotGroup.rotation.z = maxRot; rotationVelocityZ = 0; }
+
+      if (pivotGroup.rotation.y < minRot) { pivotGroup.rotation.y = minRot; rotationVelocityY = 0; }
+      if (pivotGroup.rotation.y > maxRot) { pivotGroup.rotation.y = maxRot; rotationVelocityY = 0; }
 
       // Damping
       rotationVelocityX *= 0.95;
-      rotationVelocityZ *= 0.95;
+      rotationVelocityY *= 0.95;
 
       renderer.render(scene, camera);
     }
