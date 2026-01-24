@@ -91,14 +91,18 @@
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xd9c3a2);
 
-    const camera = new THREE.PerspectiveCamera(
-      50,
-      window.innerWidth / window.innerHeight,
+    const aspect = window.innerWidth / window.innerHeight;
+    const frustumSize = 5;
+    const camera = new THREE.OrthographicCamera(
+      frustumSize * aspect / -2,
+      frustumSize * aspect / 2,
+      frustumSize / 2,
+      frustumSize / -2,
       0.1,
       1000
     );
-    camera.position.set(0, 2, 6);
-    camera.lookAt(0, 0, 0);
+    camera.position.set(0, 11, 0); // Über Szene
+    camera.lookAt(0, -1.5, 0); // Schaut weiter nach unten, um Würfel in untere Hälfte zu verschieben
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -113,21 +117,23 @@
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
 
-    // Generate 12 unique random numbers (1-12)
-    function getUniqueRandomNumbers() {
-      const numbers = [];
+    // Create random deck of 1-12 (no duplicates, each number appears only once)
+    function createUniqueRandomDeck() {
+      const deck = [];
+      // Add numbers 1-12 once
       for (let i = 1; i <= 12; i++) {
-        numbers.push(i);
+        deck.push(i);
       }
       // Fisher-Yates shuffle
-      for (let i = numbers.length - 1; i > 0; i--) {
+      for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
+        [deck[i], deck[j]] = [deck[j], deck[i]];
       }
-      return numbers;
+      return deck;
     }
 
-    const allNumbers = getUniqueRandomNumbers();
+    const randomDeck = createUniqueRandomDeck();
+    console.log('Random Deck (keine Wiederholung):', randomDeck);
 
     // Create texture for each face with 4 numbers (2x2 grid)
     function createFaceTexture(numbers) {
@@ -177,10 +183,10 @@
       ctx.textBaseline = 'middle';
 
       const positions = [
-        [128, 128],  // Top-left
-        [384, 128],  // Top-right
-        [128, 384],  // Bottom-left
-        [384, 384]   // Bottom-right
+        [128, 128],  // Top-left (Viertel 1)
+        [384, 128],  // Top-right (Viertel 2)
+        [128, 384],  // Bottom-left (Viertel 3)
+        [384, 384]   // Bottom-right (Viertel 4)
       ];
 
       numbers.forEach((num, i) => {
@@ -193,15 +199,19 @@
       return texture;
     }
 
-    // Distribute 12 numbers across 6 faces (4 numbers per face)
+    // Distribute 8 unique random numbers ONLY to the 2 visible faces when tilting Süd-Nord
+    // Nur Face 0 (Süd) und Face 1 (Nord) sind beim vertikalen Kippen sichtbar
+    // JEDE der 8 Zahlen ist einzigartig, keine Wiederholung!
     const faceNumbers = [
-      allNumbers.slice(0, 4),   // Face 0 (front)
-      allNumbers.slice(4, 8),   // Face 1 (back)
-      [allNumbers[8], allNumbers[9], allNumbers[10], allNumbers[11]],  // Face 2 (top)
-      [allNumbers[0], allNumbers[1], allNumbers[2], allNumbers[3]],    // Face 3 (bottom)
-      [allNumbers[4], allNumbers[5], allNumbers[6], allNumbers[7]],    // Face 4 (right)
-      [allNumbers[8], allNumbers[9], allNumbers[10], allNumbers[11]]   // Face 5 (left)
+      [randomDeck[0], randomDeck[1], randomDeck[2], randomDeck[3]],       // Face 0 (Süd) - 4 einzigartige Zahlen
+      [randomDeck[4], randomDeck[5], randomDeck[6], randomDeck[7]],       // Face 1 (Nord) - 4 weitere einzigartige Zahlen
+      [99, 99, 99, 99],                                                    // Face 2 (top) - nicht sichtbar beim Süd-Nord-Kippen
+      [99, 99, 99, 99],                                                    // Face 3 (bottom) - nicht sichtbar
+      [99, 99, 99, 99],                                                    // Face 4 (right) - nicht sichtbar
+      [99, 99, 99, 99]                                                     // Face 5 (left) - nicht sichtbar
     ];
+    
+    console.log('8 einzigartige Zahlen (Face 0 Süd + Face 1 Nord):', [...faceNumbers[0], ...faceNumbers[1]]);
 
     // Create materials for each face
     const materials = faceNumbers.map(numbers => 
@@ -220,23 +230,45 @@
     const pivotGroup = new THREE.Group();
     scene.add(pivotGroup);
     
-    // Position cube so it rests on horizontal bottom edge (West-East)
-    // Cube is 2x2x2, when tilted 45° on edge, center is sqrt(2) above edge
+    // Würfel liegt auf horizontaler Bodenkante (West-Ost)
     const edgeOffset = Math.sqrt(2);
-    cube.position.y = edgeOffset;
+    cube.position.y = edgeOffset; // Kante am Boden
+    cube.position.z = 0; // Zentral (eine Würfelkantenlänge nach Norden verschoben)
     
     // Rotate cube 45° around X-axis so it rests on horizontal edge
-    cube.rotation.x = Math.PI / 4; // 45° - cube rests on edge
+    cube.rotation.x = Math.PI / 4; // 45° - liegt auf Kante
     
     pivotGroup.add(cube);
     
-    // Set initial pivot rotation to Q0 position (facing viewer/south)
-    pivotGroup.rotation.x = 0; 
+    // Startposition SÜD: pivot bei +45° (Würfel liegt flach nach Süden)
+    pivotGroup.rotation.x = Math.PI / 4; // +45° 
 
     // Manual rotation controls (only vertical movement)
     let isDragging = false;
     let previousMouseY = 0;
     let rotationVelocity = 0;
+    
+    // Pinch-to-zoom variables
+    let isPinching = false;
+    let previousPinchDistance = 0;
+    let currentFrustumSize = frustumSize;
+    const minFrustumSize = 2;  // Max zoom in
+    const maxFrustumSize = 10; // Max zoom out
+
+    function getDistance(touch1, touch2) {
+      const dx = touch2.clientX - touch1.clientX;
+      const dy = touch2.clientY - touch1.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    function updateCameraZoom() {
+      const aspect = window.innerWidth / window.innerHeight;
+      camera.left = currentFrustumSize * aspect / -2;
+      camera.right = currentFrustumSize * aspect / 2;
+      camera.top = currentFrustumSize / 2;
+      camera.bottom = currentFrustumSize / -2;
+      camera.updateProjectionMatrix();
+    }
 
     function onMouseDown(e) {
       isDragging = true;
@@ -249,7 +281,7 @@
       const currentY = e.clientY || e.touches[0].clientY;
       const deltaY = currentY - previousMouseY;
 
-      // Only vertical movement affects rotation around X-axis (horizontal edge)
+      // Swipe nach oben (deltaY negativ) → Würfel kippt nach Norden
       rotationVelocity = deltaY * 0.005;
 
       previousMouseY = currentY;
@@ -258,6 +290,49 @@
     function onMouseUp() {
       isDragging = false;
     }
+    
+    function onTouchStart(e) {
+      if (e.touches.length === 2) {
+        // Zwei Finger: Pinch-Zoom
+        isPinching = true;
+        isDragging = false;
+        previousPinchDistance = getDistance(e.touches[0], e.touches[1]);
+        e.preventDefault();
+      } else if (e.touches.length === 1) {
+        // Ein Finger: Rotation
+        isPinching = false;
+        onMouseDown(e);
+      }
+    }
+
+    function onTouchMove(e) {
+      if (isPinching && e.touches.length === 2) {
+        // Pinch-Zoom
+        const currentDistance = getDistance(e.touches[0], e.touches[1]);
+        const delta = previousPinchDistance - currentDistance;
+        
+        // Zoom: größere Distanz = kleiner frustumSize = näher
+        currentFrustumSize += delta * 0.01;
+        currentFrustumSize = Math.max(minFrustumSize, Math.min(maxFrustumSize, currentFrustumSize));
+        
+        updateCameraZoom();
+        
+        previousPinchDistance = currentDistance;
+        e.preventDefault();
+      } else if (!isPinching && e.touches.length === 1) {
+        // Rotation
+        onMouseMove(e);
+      }
+    }
+
+    function onTouchEnd(e) {
+      if (e.touches.length < 2) {
+        isPinching = false;
+      }
+      if (e.touches.length === 0) {
+        isDragging = false;
+      }
+    }
 
     // Event listeners
     renderer.domElement.addEventListener('mousedown', onMouseDown);
@@ -265,9 +340,17 @@
     renderer.domElement.addEventListener('mouseup', onMouseUp);
     renderer.domElement.addEventListener('mouseleave', onMouseUp);
 
-    renderer.domElement.addEventListener('touchstart', onMouseDown);
-    renderer.domElement.addEventListener('touchmove', onMouseMove);
-    renderer.domElement.addEventListener('touchend', onMouseUp);
+    renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+    renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+    renderer.domElement.addEventListener('touchend', onTouchEnd);
+    
+    // Mouse wheel zoom (Desktop)
+    renderer.domElement.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      currentFrustumSize += e.deltaY * 0.01;
+      currentFrustumSize = Math.max(minFrustumSize, Math.min(maxFrustumSize, currentFrustumSize));
+      updateCameraZoom();
+    }, { passive: false });
 
     // Animation loop
     function animate() {
@@ -275,6 +358,19 @@
 
       // Apply rotation velocity (only around X-axis = horizontal edge)
       pivotGroup.rotation.x += rotationVelocity;
+
+      // LIMIT: Würfel darf nur zwischen -45° (Nord) und +45° (Süd) kippen
+      const minRotation = -Math.PI / 4; // -45° = Nord
+      const maxRotation = Math.PI / 4;  // +45° = Süd
+      
+      if (pivotGroup.rotation.x < minRotation) {
+        pivotGroup.rotation.x = minRotation;
+        rotationVelocity = 0; // Stop momentum
+      }
+      if (pivotGroup.rotation.x > maxRotation) {
+        pivotGroup.rotation.x = maxRotation;
+        rotationVelocity = 0; // Stop momentum
+      }
 
       // Damping (slow down over time)
       rotationVelocity *= 0.95;
@@ -286,7 +382,11 @@
 
     // Handle window resize
     window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const aspect = window.innerWidth / window.innerHeight;
+      camera.left = currentFrustumSize * aspect / -2;
+      camera.right = currentFrustumSize * aspect / 2;
+      camera.top = currentFrustumSize / 2;
+      camera.bottom = currentFrustumSize / -2;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
