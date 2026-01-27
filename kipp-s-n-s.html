@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kipp Test - Süd/Nord - CUBE BOX</title>
+  <title>Kipp Test - 3x3 Grid Perspective - CUBE BOX</title>
   <style>
     * {
       margin: 0;
@@ -79,8 +79,8 @@
   <div id="container"></div>
   
   <div id="info">
-    <h2>Kippe den Würfel vertikal (Süd ↔ Nord)</h2>
-    <p>Swipe nach oben/unten um die Bodenkante</p>
+    <h2>3×3 Grid mit Fluchtpunkt-Perspektive</h2>
+    <p>Vertikale Achse durch Nullpunkt unverzerrt</p>
   </div>
 
   <a href="testindex.html" id="backBtn">WÜRFEL IN DIE BOX</a>
@@ -92,17 +92,14 @@
     scene.background = new THREE.Color(0xd9c3a2);
 
     const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = 5;
-    const camera = new THREE.OrthographicCamera(
-      frustumSize * aspect / -2,
-      frustumSize * aspect / 2,
-      frustumSize / 2,
-      frustumSize / -2,
-      0.1,
-      1000
+    const camera = new THREE.PerspectiveCamera(
+      30,      // FOV kleiner = engerer Winkel = größerer Würfel
+      aspect,  
+      0.1,     
+      1000     
     );
-    camera.position.set(0, 11, 0); // Über Szene
-    camera.lookAt(0, -1.5, 0); // Schaut weiter nach unten, um Würfel in untere Hälfte zu verschieben
+    camera.position.set(0, 35, 0); // Viel höher (statt 11)
+    camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -117,11 +114,11 @@
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
 
-    // Create random deck of 1-12 (no duplicates, each number appears only once)
+    // Create random deck of 1-27 (no duplicates)
     function createUniqueRandomDeck() {
       const deck = [];
-      // Add numbers 1-12 once
-      for (let i = 1; i <= 12; i++) {
+      // Add numbers 1-27 once
+      for (let i = 1; i <= 27; i++) {
         deck.push(i);
       }
       // Fisher-Yates shuffle
@@ -133,9 +130,9 @@
     }
 
     const randomDeck = createUniqueRandomDeck();
-    console.log('Random Deck (keine Wiederholung):', randomDeck);
+    console.log('Random Deck (1-27, keine Wiederholung):', randomDeck);
 
-    // Create texture for each face with 4 numbers (2x2 grid)
+    // Create texture for each face with 9 numbers (3x3 grid)
     function createFaceTexture(numbers, faceIndex) {
       const canvas = document.createElement('canvas');
       canvas.width = 512;
@@ -167,33 +164,48 @@
       ctx.textBaseline = 'top';
       ctx.fillText(`F${faceIndex}`, 10, 10);
 
-      // Draw 2x2 grid
+      // Draw 3x3 grid
       ctx.strokeStyle = 'rgba(122, 74, 52, 0.4)';
       ctx.lineWidth = 4;
       
-      // Vertical line
+      // Vertical lines
       ctx.beginPath();
-      ctx.moveTo(256, 32);
-      ctx.lineTo(256, 480);
+      ctx.moveTo(170, 32);
+      ctx.lineTo(170, 480);
       ctx.stroke();
       
-      // Horizontal line
       ctx.beginPath();
-      ctx.moveTo(32, 256);
-      ctx.lineTo(480, 256);
+      ctx.moveTo(342, 32);
+      ctx.lineTo(342, 480);
+      ctx.stroke();
+      
+      // Horizontal lines
+      ctx.beginPath();
+      ctx.moveTo(32, 170);
+      ctx.lineTo(480, 170);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(32, 342);
+      ctx.lineTo(480, 342);
       ctx.stroke();
 
-      // Draw numbers in 2x2 grid
+      // Draw numbers in 3x3 grid
       ctx.fillStyle = '#2a160c';
-      ctx.font = 'bold 120px system-ui, -apple-system, sans-serif';
+      ctx.font = 'bold 80px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
       const positions = [
-        [128, 128],  // Top-left (Viertel 1)
-        [384, 128],  // Top-right (Viertel 2)
-        [128, 384],  // Bottom-left (Viertel 3)
-        [384, 384]   // Bottom-right (Viertel 4)
+        [101, 101],   // Top-left
+        [256, 101],   // Top-center
+        [411, 101],   // Top-right
+        [101, 256],   // Middle-left
+        [256, 256],   // Center
+        [411, 256],   // Middle-right
+        [101, 411],   // Bottom-left
+        [256, 411],   // Bottom-center
+        [411, 411]    // Bottom-right
       ];
 
       numbers.forEach((num, i) => {
@@ -211,18 +223,18 @@
       return texture;
     }
 
-    // Face 5 und Face 2 sind beim Süd-Nord-Kippen sichtbar (siehe Screenshot)
-    // Diese bekommen die 8 Random-Zahlen ohne Wiederholung!
+    // Face 5 (Süd Start) und Face 2 (Nord nach Kipp) sind sichtbar
+    // Jede Face bekommt 9 Random-Zahlen (3x3 Grid)
     const faceNumbers = [
-      ['X', 'X', 'X', 'X'],                                               // Face 0 - nicht sichtbar beim Süd-Nord-Kippen
-      ['X', 'X', 'X', 'X'],                                               // Face 1 - nicht sichtbar
-      [randomDeck[4], randomDeck[5], randomDeck[6], randomDeck[7]],       // Face 2 (Nord nach Kippen) - 4 Random-Zahlen
-      ['X', 'X', 'X', 'X'],                                               // Face 3 - nicht sichtbar
-      ['X', 'X', 'X', 'X'],                                               // Face 4 - nicht sichtbar
-      [randomDeck[0], randomDeck[1], randomDeck[2], randomDeck[3]]        // Face 5 (Süd Ausgangsposition) - 4 Random-Zahlen
+      ['X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],  // Face 0 - nicht sichtbar
+      ['X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],  // Face 1 - nicht sichtbar
+      [randomDeck[9], randomDeck[10], randomDeck[11], randomDeck[12], randomDeck[13], randomDeck[14], randomDeck[15], randomDeck[16], randomDeck[17]], // Face 2 (Nord)
+      ['X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],  // Face 3 - nicht sichtbar
+      ['X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],  // Face 4 - nicht sichtbar
+      [randomDeck[0], randomDeck[1], randomDeck[2], randomDeck[3], randomDeck[4], randomDeck[5], randomDeck[6], randomDeck[7], randomDeck[8]]  // Face 5 (Süd Start)
     ];
     
-    console.log('8 Random-Zahlen ohne Wiederholung (F5 Süd + F2 Nord):', [
+    console.log('18 Random-Zahlen (F5 Süd + F2 Nord):', [
       ...faceNumbers[5], 
       ...faceNumbers[2]
     ]);
@@ -236,18 +248,21 @@
       })
     );
 
-    // Create cube
-    const geometry = new THREE.BoxGeometry(2, 2, 2);
+    // Create cube - HALB so groß
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
     const cube = new THREE.Mesh(geometry, materials);
     
     // Create pivot group for rotation around bottom edge
     const pivotGroup = new THREE.Group();
     scene.add(pivotGroup);
     
-    // Würfel liegt auf horizontaler Bodenkante (West-Ost)
-    const edgeOffset = Math.sqrt(2);
-    cube.position.y = edgeOffset; // Kante am Boden
-    cube.position.z = 0; // Zentral
+    // Bottom-Ecke Nordost soll am Koordinaten-Nullpunkt (0,0,0) liegen
+    // Bottom-Nordkante ist die Drehachse (liegt auf X-Achse bei y=0)
+    const edgeOffset = Math.sqrt(2) / 2; // Diagonale bei 45°
+    
+    cube.position.x = -edgeOffset;    // X nach WESTEN verschoben
+    cube.position.y = edgeOffset;     // Y nach OBEN - Bottom-Kante liegt dann bei y=0
+    cube.position.z = edgeOffset;     // Z nach SÜDEN verschoben
     
     // Rotate cube 45° around X-axis so it rests on horizontal edge
     cube.rotation.x = Math.PI / 4; // 45° - liegt auf Kante
@@ -262,12 +277,12 @@
     let previousMouseY = 0;
     let rotationVelocity = 0;
     
-    // Pinch-to-zoom variables
+    // Pinch-to-zoom variables (für Perspective Camera)
     let isPinching = false;
     let previousPinchDistance = 0;
-    let currentFrustumSize = frustumSize;
-    const minFrustumSize = 2;  // Max zoom in
-    const maxFrustumSize = 10; // Max zoom out
+    let currentFOV = 50;  // Field of View statt frustumSize
+    const minFOV = 20;    // Näher heran (engerer Winkel)
+    const maxFOV = 80;    // Weiter weg (weiterer Winkel)
 
     function getDistance(touch1, touch2) {
       const dx = touch2.clientX - touch1.clientX;
@@ -276,11 +291,7 @@
     }
     
     function updateCameraZoom() {
-      const aspect = window.innerWidth / window.innerHeight;
-      camera.left = currentFrustumSize * aspect / -2;
-      camera.right = currentFrustumSize * aspect / 2;
-      camera.top = currentFrustumSize / 2;
-      camera.bottom = currentFrustumSize / -2;
+      camera.fov = currentFOV;  // Field of View ändern
       camera.updateProjectionMatrix();
     }
 
@@ -325,9 +336,9 @@
         const currentDistance = getDistance(e.touches[0], e.touches[1]);
         const delta = previousPinchDistance - currentDistance;
         
-        // Zoom: größere Distanz = kleiner frustumSize = näher
-        currentFrustumSize += delta * 0.01;
-        currentFrustumSize = Math.max(minFrustumSize, Math.min(maxFrustumSize, currentFrustumSize));
+        // Zoom: größere Distanz = kleiner FOV = näher
+        currentFOV += delta * 0.05;
+        currentFOV = Math.max(minFOV, Math.min(maxFOV, currentFOV));
         
         updateCameraZoom();
         
@@ -361,8 +372,8 @@
     // Mouse wheel zoom (Desktop)
     renderer.domElement.addEventListener('wheel', (e) => {
       e.preventDefault();
-      currentFrustumSize += e.deltaY * 0.01;
-      currentFrustumSize = Math.max(minFrustumSize, Math.min(maxFrustumSize, currentFrustumSize));
+      currentFOV += e.deltaY * 0.05;
+      currentFOV = Math.max(minFOV, Math.min(maxFOV, currentFOV));
       updateCameraZoom();
     }, { passive: false });
 
@@ -397,10 +408,8 @@
     // Handle window resize
     window.addEventListener('resize', () => {
       const aspect = window.innerWidth / window.innerHeight;
-      camera.left = currentFrustumSize * aspect / -2;
-      camera.right = currentFrustumSize * aspect / 2;
-      camera.top = currentFrustumSize / 2;
-      camera.bottom = currentFrustumSize / -2;
+      camera.aspect = aspect;
+      camera.fov = currentFOV;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
