@@ -62,9 +62,9 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
-    // ────────────────────────────────────────────────
-    // Holz-Textur (WebP) laden
-    // ────────────────────────────────────────────────
+    // =========================
+    // OPTIK-ONLY: WebP Holzfläche laden
+    // =========================
     const WOOD_SRC = 'wuerfelflaeche.webp';
     const woodImg = new Image();
     woodImg.crossOrigin = 'anonymous';
@@ -83,32 +83,35 @@
           mat.map = createFaceTexture(faceNumbersRef[i], i);
           mat.needsUpdate = true;
         }
+        console.log('✅ Wood WebP geladen – Face-Texturen optisch aktualisiert.');
       }
     };
-    woodImg.onerror = () => console.warn('Holz-WebP nicht geladen → Fallback');
+    woodImg.onerror = () => {
+      console.warn('⚠️ Holz-WebP konnte nicht geladen werden:', WOOD_SRC);
+      console.warn('   → Datei-Pfad/Name prüfen. Fallback-Holz (Gradient) bleibt aktiv.');
+    };
     woodImg.src = WOOD_SRC;
 
-    // ────────────────────────────────────────────────
-    // Szene & Kamera – 1 Unit = 45 Pixel, Kamera von hinten (um 180°-Drehung zu korrigieren)
-    // ────────────────────────────────────────────────
+    // =========================
+    // Scene Setup – zurück zu 1 Unit = 45 px
+    // =========================
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x3f1a14);
 
-    const containerWidth  = 360;
+    const containerWidth = 360;
     const containerHeight = 720;
-
     const pixelPerUnit = 45;
-    const worldWidth  = containerWidth  / pixelPerUnit;  // 8
-    const worldHeight = containerHeight / pixelPerUnit;  // 16
+    const worldWidth = containerWidth / pixelPerUnit;   // 8
+    const worldHeight = containerHeight / pixelPerUnit; // 16
 
     const camera = new THREE.OrthographicCamera(
-      worldWidth  / -2,
-      worldWidth  /  2,
-      worldHeight /  2,
+      worldWidth / -2,
+      worldWidth / 2,
+      worldHeight / 2,
       worldHeight / -2,
       0.1, 1000
     );
-    camera.position.set(0, 0, -10);  // Von der anderen Seite schauen (korrigiert "von unten"-Sicht)
+    camera.position.set(0, 0, 10);          // Original-Kameraseite
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -116,19 +119,18 @@
     renderer.setPixelRatio(window.devicePixelRatio);
     document.getElementById('container').appendChild(renderer.domElement);
 
-    // Beleuchtung (angepasst für neue Kameraposition)
-    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-    dirLight.position.set(4, 8, -5);  // Licht von der neuen Vorderseite
-    scene.add(dirLight);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
 
-    // ────────────────────────────────────────────────
-    // Zufällige Zahlen 1–12
-    // ────────────────────────────────────────────────
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
+
     function createUniqueRandomDeck() {
-      const deck = Array.from({length:12}, (_,i)=>i+1);
-      for (let i = deck.length-1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i+1));
+      const deck = [];
+      for (let i = 1; i <= 12; i++) deck.push(i);
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
         [deck[i], deck[j]] = [deck[j], deck[i]];
       }
       return deck;
@@ -136,15 +138,12 @@
 
     const randomDeck = createUniqueRandomDeck();
 
-    // ────────────────────────────────────────────────
-    // Face-Textur erstellen
-    // ────────────────────────────────────────────────
     function createFaceTexture(numbers, faceIndex) {
       const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = 426;
+      canvas.width = 426;
+      canvas.height = 426;
       const ctx = canvas.getContext('2d');
 
-      // Hintergrund
       if (woodReady) {
         if (faceIndex === 5) {
           ctx.save();
@@ -156,81 +155,96 @@
           ctx.drawImage(woodImg, 0, 0, 426, 426);
         }
       } else {
-        const g = ctx.createLinearGradient(0,0,426,426);
-        g.addColorStop(0,   '#d7c2a4');
-        g.addColorStop(0.5, '#c9b08f');
-        g.addColorStop(1,   '#d7c2a4');
-        ctx.fillStyle = g;
-        ctx.fillRect(0,0,426,426);
+        const gradient = ctx.createLinearGradient(0, 0, 426, 426);
+        gradient.addColorStop(0, '#d7c2a4');
+        gradient.addColorStop(0.5, '#c9b08f');
+        gradient.addColorStop(1, '#d7c2a4');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 426, 426);
+
+        ctx.strokeStyle = 'rgba(155, 70, 110, 0.08)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 30; i++) {
+          ctx.beginPath();
+          ctx.moveTo(Math.random() * 426, 0);
+          ctx.lineTo(Math.random() * 426, 426);
+          ctx.stroke();
+        }
       }
 
-      // Gitter
-      ctx.strokeStyle = 'rgba(122,74,52,0.4)';
-      ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.moveTo(141,27);  ctx.lineTo(141,399);  ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(285,27);  ctx.lineTo(285,399);  ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(27,141);  ctx.lineTo(399,141);  ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(27,285);  ctx.lineTo(399,285);  ctx.stroke();
+      ctx.fillStyle = 'red';
+      ctx.font = 'bold 40px system-ui';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`F${faceIndex}`, 10, 10);
 
-      // Zahlen
+      ctx.strokeStyle = 'rgba(122, 74, 52, 0.4)';
+      ctx.lineWidth = 4;
+
+      ctx.beginPath(); ctx.moveTo(141, 27); ctx.lineTo(141, 399); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(285, 27); ctx.lineTo(285, 399); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(27, 141); ctx.lineTo(399, 141); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(27, 285); ctx.lineTo(399, 285); ctx.stroke();
+
       ctx.fillStyle = '#2a160c';
-      ctx.font = 'bold 80px system-ui, sans-serif';
+      ctx.font = 'bold 80px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      const pos = [
-        [84,84], [213,84], [342,84],
-        [84,213],[213,213],[342,213],
-        [84,342],[213,342],[342,342]
+      const positions = [
+        [84, 84],[213, 84],[342, 84],
+        [84, 213],[213, 213],[342, 213],
+        [84, 342],[213, 342],[342, 342]
       ];
 
-      numbers.forEach((n, i) => {
-        if (n === 'X') return;
-        const txt = (n===6 || n===9) ? n+'.' : String(n);
-        ctx.fillText(txt, pos[i][0], pos[i][1]);
+      numbers.forEach((num, i) => {
+        let text;
+        if (num === 'X') {
+          text = '';
+        } else {
+          text = (num === 9 || num === 6) ? `${num}.` : String(num);
+        }
+        ctx.fillText(text, positions[i][0], positions[i][1]);
       });
 
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.needsUpdate = true;
-      return tex;
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      return texture;
     }
 
-    // ────────────────────────────────────────────────
-    // Slots & Kipp-Logik
-    // ────────────────────────────────────────────────
     let currentSlots = {
       face5: { S1: randomDeck[2], S2: randomDeck[3], S3: randomDeck[1], S4: randomDeck[0] },
       face2: { S1: randomDeck[6], S2: randomDeck[7], S3: randomDeck[5], S4: randomDeck[4] }
     };
 
     function swapSlots() {
-      ['face5','face2'].forEach(face => {
+      for (let face of ['face5', 'face2']) {
         const old = {...currentSlots[face]};
         currentSlots[face].S3 = old.S1;
         currentSlots[face].S4 = old.S2;
         currentSlots[face].S1 = old.S3;
         currentSlots[face].S2 = old.S4;
-      });
+      }
     }
 
-    const face5_base    = [randomDeck[0],'X','X',randomDeck[1],'X','X','X',randomDeck[2],randomDeck[3]];
+    const face5_base = [randomDeck[0],'X','X',randomDeck[1],'X','X','X',randomDeck[2],randomDeck[3]];
     const face5_rotated = [face5_base[8],face5_base[7],face5_base[6],face5_base[5],face5_base[4],face5_base[3],face5_base[2],face5_base[1],face5_base[0]];
 
-    const face2_base    = [randomDeck[4],'X','X',randomDeck[5],'X','X','X',randomDeck[6],randomDeck[7]];
+    const face2_base = [randomDeck[4],'X','X',randomDeck[5],'X','X','X',randomDeck[6],randomDeck[7]];
     const face2_rotated = [face2_base[6],face2_base[3],face2_base[0],face2_base[7],face2_base[4],face2_base[1],face2_base[8],face2_base[5],face2_base[2]];
 
     const faceNumbers = [
-      Array(9).fill('X'),     // 0
-      Array(9).fill('X'),     // 1
-      face2_rotated,          // 2
-      Array(9).fill('X'),     // 3
-      Array(9).fill('X'),     // 4
-      face5_rotated           // 5
+      ['X','X','X','X','X','X','X','X','X'],
+      ['X','X','X','X','X','X','X','X','X'],
+      face2_rotated,
+      ['X','X','X','X','X','X','X','X','X'],
+      ['X','X','X','X','X','X','X','X','X'],
+      face5_rotated
     ];
 
-    const materials = faceNumbers.map((nums, i) =>
+    const materials = faceNumbers.map((numbers, index) =>
       new THREE.MeshStandardMaterial({
-        map: createFaceTexture(nums, i),
+        map: createFaceTexture(numbers, index),
         roughness: 0.7,
         metalness: 0.1
       })
@@ -239,152 +253,157 @@
     materialsRef = materials;
     faceNumbersRef = faceNumbers;
 
-    // ────────────────────────────────────────────────
-    // Würfel – 135 px = 3 Units, Ostkante an Z-Achse
-    // ────────────────────────────────────────────────
-    const cubeSize = 3;
-
-    const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+    const geometry = new THREE.BoxGeometry(3, 3, 3);  // 135 px
     const cube = new THREE.Mesh(geometry, materials);
 
-    // Untere Nordkante → x=0    → Würfelmitte x = +1.5
-    // Untere Ostkante  → z=0    → Würfelmitte z = +1.5
-    // Boden            → y=0    → Würfelmitte y = +1.5
-    cube.position.set(cubeSize/2, cubeSize/2, cubeSize/2);
-
-    cube.rotation.x = -Math.PI / 4;  // Vorzeichen umkehrt für Kipp nach oben
-
     const pivotGroup = new THREE.Group();
-    pivotGroup.add(cube);
     scene.add(pivotGroup);
 
-    pivotGroup.rotation.x = -Math.PI / 4;  // Startrotation umkehren
+    cube.position.x = 1.5;     // Mitte bei x = 1.5 → Ostkante bei z=0
+    cube.position.y = 1.5;
+    cube.position.z = 1.5;
 
-    // Eine Rasterzelle weiter südlich + einige px (ca. 10 px = 0.22 Units)
-    pivotGroup.position.y = -1.22;
+    cube.rotation.x = Math.PI / 4;
+    pivotGroup.add(cube);
 
-    // ────────────────────────────────────────────────
-    // Drag / Touch – Bewegungsrichtung anpassen
-    // ────────────────────────────────────────────────
+    pivotGroup.rotation.x = Math.PI / 4;
+
+    // ─── Nur diese eine Zeile geändert ───
+    pivotGroup.position.y = -1;   // eine Rasterzelle nach Süden (y negativ = nach unten im Bild)
+
+    // Drag & Touch (wie in deiner Originalversion)
     let isDragging = false;
-    let prevY = 0;
-    let velocity = 0;
+    let previousMouseY = 0;
+    let rotationVelocity = 0;
 
-    function onDown(e) {
+    function onMouseDown(e) {
       isDragging = true;
-      prevY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-      e.preventDefault?.();
+      previousMouseY = e.clientY || e.touches[0].clientY;
     }
 
-    function onMove(e) {
+    function onMouseMove(e) {
       if (!isDragging) return;
-      const y = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-      velocity = (y - prevY) * 0.004;  // Vorzeichen anpassen für natürliche Wischrichtung (nach Norden wischt Würfel nördlich)
-      prevY = y;
-      e.preventDefault?.();
+      const currentY = e.clientY || e.touches[0].clientY;
+      const deltaY = currentY - previousMouseY;
+      rotationVelocity = deltaY * 0.005;
+      previousMouseY = currentY;
     }
 
-    function onUp() {
-      isDragging = false;
+    function onMouseUp() { isDragging = false; }
+
+    function onTouchStart(e) {
+      if (e.touches.length === 1) onMouseDown(e);
     }
 
-    const canvas = renderer.domElement;
-    canvas.addEventListener('mousedown',   onDown);
-    canvas.addEventListener('mousemove',   onMove);
-    canvas.addEventListener('mouseup',     onUp);
-    canvas.addEventListener('mouseleave',  onUp);
+    function onTouchMove(e) {
+      if (e.touches.length === 1) onMouseMove(e);
+    }
 
-    canvas.addEventListener('touchstart',  onDown, {passive:false});
-    canvas.addEventListener('touchmove',   onMove, {passive:false});
-    canvas.addEventListener('touchend',    onUp);
-    canvas.addEventListener('touchcancel', onUp);
+    function onTouchEnd(e) {
+      if (e.touches.length === 0) isDragging = false;
+    }
 
-    // ────────────────────────────────────────────────
-    // Animation – Min/Max-Rotationen umkehren für Kipp nach oben
-    // ────────────────────────────────────────────────
-    let lastRot = pivotGroup.rotation.x;
-    let kippDone = false;
+    renderer.domElement.addEventListener('mousedown', onMouseDown);
+    renderer.domElement.addEventListener('mousemove', onMouseMove);
+    renderer.domElement.addEventListener('mouseup', onMouseUp);
+    renderer.domElement.addEventListener('mouseleave', onMouseUp);
+
+    renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+    renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+    renderer.domElement.addEventListener('touchend', onTouchEnd);
+
+    // Animation (wie original)
+    let lastRotation = pivotGroup.rotation.x;
+    let kippComplete = false;
 
     function animate() {
       requestAnimationFrame(animate);
 
-      pivotGroup.rotation.x += velocity;
+      pivotGroup.rotation.x += rotationVelocity;
 
-      const minRot = Math.PI/4;  // Umkehrt: höherer Wert für "unten"
-      const maxRot = -Math.PI/4; // Niedriger Wert für "oben"
+      const minRotation = -Math.PI / 4;
+      const maxRotation = Math.PI / 4;
 
-      if (pivotGroup.rotation.x > minRot) {
-        pivotGroup.rotation.x = minRot;
-        velocity = 0;
-        if (!kippDone && lastRot < minRot - 0.08) {
+      if (pivotGroup.rotation.x < minRotation) {
+        pivotGroup.rotation.x = minRotation;
+        rotationVelocity = 0;
+        if (!kippComplete && lastRotation > minRotation + 0.1) {
           swapSlots();
-          kippDone = true;
+          kippComplete = true;
         }
       }
-      if (pivotGroup.rotation.x < maxRot) {
-        pivotGroup.rotation.x = maxRot;
-        velocity = 0;
-        if (!kippDone && lastRot > maxRot + 0.08) {
+      if (pivotGroup.rotation.x > maxRotation) {
+        pivotGroup.rotation.x = maxRotation;
+        rotationVelocity = 0;
+        if (!kippComplete && lastRotation < maxRotation - 0.1) {
           swapSlots();
-          kippDone = true;
+          kippComplete = true;
         }
       }
 
-      if (Math.abs(velocity) > 0.008) kippDone = false;
+      if (Math.abs(rotationVelocity) > 0.01) {
+        kippComplete = false;
+      }
 
-      lastRot = pivotGroup.rotation.x;
-      velocity *= 0.94;
+      lastRotation = pivotGroup.rotation.x;
+      rotationVelocity *= 0.95;
 
       renderer.render(scene, camera);
     }
 
     animate();
 
-    // ────────────────────────────────────────────────
-    // Grid-Overlay (Debug-Hilfe)
-    // ────────────────────────────────────────────────
-    const grid = document.getElementById('grid-overlay');
-    const gs = 45;
-    grid.setAttribute('viewBox', `0 0 360 720`);
-    grid.setAttribute('width', '360');
-    grid.setAttribute('height', '720');
+    // Grid Overlay (unverändert)
+    const gridOverlay = document.getElementById('grid-overlay');
+    const gridSize = 45;
+    const gridHeight = 720;
 
-    // Vertikale Linien
+    gridOverlay.setAttribute('viewBox', `0 0 360 ${gridHeight}`);
+    gridOverlay.setAttribute('width', '360');
+    gridOverlay.setAttribute('height', gridHeight);
+
     for (let i = 0; i <= 8; i++) {
-      const x = i * gs;
-      const l = document.createElementNS('http://www.w3.org/2000/svg','line');
-      l.setAttribute('x1',x); l.setAttribute('x2',x);
-      l.setAttribute('y1',0); l.setAttribute('y2',720);
-      grid.appendChild(l);
+      const x = i * gridSize;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x);
+      line.setAttribute('y1', 0);
+      line.setAttribute('x2', x);
+      line.setAttribute('y2', gridHeight);
+      gridOverlay.appendChild(line);
     }
 
-    // Horizontale Linien
-    for (let i = 0; i <= 16; i++) {
-      const y = i * gs;
-      const l = document.createElementNS('http://www.w3.org/2000/svg','line');
-      l.setAttribute('x1',0); l.setAttribute('x2',360);
-      l.setAttribute('y1',y); l.setAttribute('y2',y);
-      grid.appendChild(l);
+    const rows = Math.ceil(gridHeight / gridSize);
+    for (let i = 0; i <= rows; i++) {
+      const y = i * gridSize;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', 0);
+      line.setAttribute('y1', y);
+      line.setAttribute('x2', 360);
+      line.setAttribute('y2', y);
+      gridOverlay.appendChild(line);
     }
 
-    // Achsen hervorheben
-    const xAxis = document.createElementNS('http://www.w3.org/2000/svg','line');
-    xAxis.setAttribute('x1',0);   xAxis.setAttribute('x2',360);
-    xAxis.setAttribute('y1',270); xAxis.setAttribute('y2',270);
-    xAxis.setAttribute('stroke','rgba(255,255,255,0.9)');
-    xAxis.setAttribute('stroke-width',2);
-    grid.appendChild(xAxis);
+    const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    xAxis.setAttribute('x1', 0);
+    xAxis.setAttribute('y1', 270);
+    xAxis.setAttribute('x2', 360);
+    xAxis.setAttribute('y2', 270);
+    xAxis.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
+    xAxis.setAttribute('stroke-width', '2');
+    gridOverlay.appendChild(xAxis);
 
-    const zAxis = document.createElementNS('http://www.w3.org/2000/svg','line');
-    zAxis.setAttribute('x1',180); zAxis.setAttribute('x2',180);
-    zAxis.setAttribute('y1',0);   zAxis.setAttribute('y2',720);
-    zAxis.setAttribute('stroke','rgba(255,255,255,0.9)');
-    zAxis.setAttribute('stroke-width',2);
-    grid.appendChild(zAxis);
+    const zAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    zAxis.setAttribute('x1', 180);
+    zAxis.setAttribute('y1', 0);
+    zAxis.setAttribute('x2', 180);
+    zAxis.setAttribute('y2', 720);
+    zAxis.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
+    zAxis.setAttribute('stroke-width', '2');
+    gridOverlay.appendChild(zAxis);
 
-    document.addEventListener('keydown', e => {
-      if (e.key.toLowerCase() === 'g') {
-        grid.classList.toggle('hidden');
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'g' || e.key === 'G') {
+        gridOverlay.classList.toggle('hidden');
       }
     });
   </script>
