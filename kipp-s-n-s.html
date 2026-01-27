@@ -9,66 +9,56 @@
 
     body {
       font-family: system-ui, -apple-system, sans-serif;
-      background: linear-gradient(180deg, #d9c3a2, #cdb28f);
+      background: #000000;
       overflow: hidden;
       touch-action: none;
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
     }
 
-    #container { width: 100vw; height: 100vh; position: relative; }
-
-    #info {
-      position: absolute;
-      top: 20px;
+    #container { 
+      position: fixed;
+      top: 0;
       left: 50%;
       transform: translateX(-50%);
-      color: #4a2418;
-      text-align: center;
-      background: rgba(234, 215, 190, 0.9);
-      padding: 16px 32px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      z-index: 10;
+      width: 360px;
+      height: 100vh;
+    }
+
+    #container canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    #grid-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 360px !important;
+      height: 720px !important;
       pointer-events: none;
+      z-index: 100;
     }
 
-    #info h2 { font-size: 24px; margin-bottom: 8px; }
-    #info p  { font-size: 16px; opacity: 0.8; }
-
-    #backBtn {
-      position: absolute;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(0,0,0,0.05)), #ead7be;
-      color: #2a160c;
-      border: 3px solid rgba(0,0,0,0.35);
-      border-radius: 12px;
-      padding: 16px 40px;
-      font-size: 20px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-decoration: none;
-      display: inline-block;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      z-index: 10;
+    #grid-overlay.hidden {
+      display: none;
     }
 
-    #backBtn:hover {
-      transform: translateX(-50%) translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    #grid-overlay line {
+      stroke: rgba(255, 255, 255, 0.2);
+      stroke-width: 1;
     }
   </style>
 </head>
 <body>
-  <div id="container"></div>
-
-  <div id="info">
-    <h2>3×3 Grid Orthographic (ohne Fluchtpunkt)</h2>
-    <p>9 Zahlen pro Fläche, 18 total</p>
+  <div id="container">
+    <svg id="grid-overlay" xmlns="http://www.w3.org/2000/svg"></svg>
   </div>
-
-  <a href="testindex.html" id="backBtn">WÜRFEL IN DIE BOX</a>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
@@ -107,11 +97,19 @@
     // =========================
     // Scene Setup
     // =========================
+    // KOORDINATENSYSTEM:
+    // Spalten: A(0-45px), B(45-90px), C(90-135px), D(135-180px), E(180-225px), F(225-270px), G(270-315px), H(315-360px)
+    // Zeilen: 1(0-45px), 2(45-90px), 3(90-135px), 4(135-180px), 5(180-225px), 6(225-270px), 7(270-315px), ...
+    // Würfel-Nullpunkt (x=0, z=0): Zwischen D/E (180px), zwischen Zeile 6/7 (270px)
+    
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xd9c3a2);
+    scene.background = new THREE.Color(0x3f1a14); // Mahagoni schwarz-rot-braun
 
-    const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = 5;
+    const containerWidth = 360;  // Feste Breite
+    const containerHeight = 720; // FESTE Höhe (Design-Resolution!)
+    
+    const aspect = containerWidth / containerHeight; // 0.5
+    const frustumSize = 2.5;
     const camera = new THREE.OrthographicCamera(
       frustumSize * aspect / -2,
       frustumSize * aspect / 2,
@@ -122,9 +120,9 @@
     );
     camera.position.set(0, 11, 0);
     camera.lookAt(0, 0, 0);
-
+    
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(360, 720); // FESTE 720px!
     renderer.setPixelRatio(window.devicePixelRatio);
     document.getElementById('container').appendChild(renderer.domElement);
 
@@ -291,6 +289,13 @@
     const pivotGroup = new THREE.Group();
     scene.add(pivotGroup);
 
+    // ACHSMITTELPUNKT (x=0, z=0): Zwischen Spalte D/E (180px), zwischen Zeile 6/7 (270px)
+    // Nord-Ost-Ecke des Würfels liegt EXAKT auf diesem Achsmittelpunkt
+    // Berechnung: 270px / 720px × 2.5 Einheiten = 0.9375 von oben
+    //             Top (+1.25) - 0.9375 = 0.3125
+    pivotGroup.position.x = 0;      // Zwischen Spalte D und E (180px horizontal)
+    pivotGroup.position.z = 0.3125; // Zwischen Zeile 6 und 7 (270px vertikal)
+
     const edgeOffset = Math.sqrt(2) / 2;
 
     cube.position.x = -edgeOffset;
@@ -306,28 +311,6 @@
     let isDragging = false;
     let previousMouseY = 0;
     let rotationVelocity = 0;
-
-    // Pinch-to-zoom variables
-    let isPinching = false;
-    let previousPinchDistance = 0;
-    let currentFrustumSize = frustumSize;
-    const minFrustumSize = 2;
-    const maxFrustumSize = 10;
-
-    function getDistance(touch1, touch2) {
-      const dx = touch2.clientX - touch1.clientX;
-      const dy = touch2.clientY - touch1.clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    function updateCameraZoom() {
-      const aspect = window.innerWidth / window.innerHeight;
-      camera.left = currentFrustumSize * aspect / -2;
-      camera.right = currentFrustumSize * aspect / 2;
-      camera.top = currentFrustumSize / 2;
-      camera.bottom = currentFrustumSize / -2;
-      camera.updateProjectionMatrix();
-    }
 
     function onMouseDown(e) {
       isDragging = true;
@@ -345,36 +328,21 @@
     function onMouseUp() { isDragging = false; }
 
     function onTouchStart(e) {
-      if (e.touches.length === 2) {
-        isPinching = true;
-        isDragging = false;
-        previousPinchDistance = getDistance(e.touches[0], e.touches[1]);
-        e.preventDefault();
-      } else if (e.touches.length === 1) {
-        isPinching = false;
+      if (e.touches.length === 1) {
         onMouseDown(e);
       }
     }
 
     function onTouchMove(e) {
-      if (isPinching && e.touches.length === 2) {
-        const currentDistance = getDistance(e.touches[0], e.touches[1]);
-        const delta = previousPinchDistance - currentDistance;
-
-        currentFrustumSize += delta * 0.01;
-        currentFrustumSize = Math.max(minFrustumSize, Math.min(maxFrustumSize, currentFrustumSize));
-
-        updateCameraZoom();
-        previousPinchDistance = currentDistance;
-        e.preventDefault();
-      } else if (!isPinching && e.touches.length === 1) {
+      if (e.touches.length === 1) {
         onMouseMove(e);
       }
     }
 
     function onTouchEnd(e) {
-      if (e.touches.length < 2) isPinching = false;
-      if (e.touches.length === 0) isDragging = false;
+      if (e.touches.length === 0) {
+        isDragging = false;
+      }
     }
 
     // Event listeners
@@ -386,13 +354,6 @@
     renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
     renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
     renderer.domElement.addEventListener('touchend', onTouchEnd);
-
-    renderer.domElement.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      currentFrustumSize += e.deltaY * 0.01;
-      currentFrustumSize = Math.max(minFrustumSize, Math.min(maxFrustumSize, currentFrustumSize));
-      updateCameraZoom();
-    }, { passive: false });
 
     // Animation loop (dein Original)
     let lastRotation = pivotGroup.rotation.x;
@@ -436,15 +397,67 @@
 
     animate();
 
-    // Resize
-    window.addEventListener('resize', () => {
-      const aspect = window.innerWidth / window.innerHeight;
-      camera.left = currentFrustumSize * aspect / -2;
-      camera.right = currentFrustumSize * aspect / 2;
-      camera.top = currentFrustumSize / 2;
-      camera.bottom = currentFrustumSize / -2;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+    // =========================
+    // Grid Overlay Setup
+    // =========================
+    const gridOverlay = document.getElementById('grid-overlay');
+    const gridSize = 45; // 360px ÷ 8 = 45px
+    const gridHeight = 720; // FESTE Höhe (wie Canvas!)
+    
+    gridOverlay.setAttribute('viewBox', `0 0 360 ${gridHeight}`);
+    gridOverlay.setAttribute('width', '360');
+    gridOverlay.setAttribute('height', gridHeight);
+    
+    // Vertikale Linien (8 Spalten)
+    for (let i = 0; i <= 8; i++) {
+      const x = i * gridSize;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x);
+      line.setAttribute('y1', 0);
+      line.setAttribute('x2', x);
+      line.setAttribute('y2', gridHeight);
+      gridOverlay.appendChild(line);
+    }
+    
+    // Horizontale Linien (alle 45px bis 720px)
+    const rows = Math.ceil(gridHeight / gridSize); // 16 Zeilen
+    for (let i = 0; i <= rows; i++) {
+      const y = i * gridSize;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', 0);
+      line.setAttribute('y1', y);
+      line.setAttribute('x2', 360);
+      line.setAttribute('y2', y);
+      gridOverlay.appendChild(line);
+    }
+    
+    // ACHSEN einzeichnen (hellweiß)
+    // X-Achse: horizontal durch Achsmittelpunkt (Zeile 6/7 = 270px)
+    const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    xAxis.setAttribute('x1', 0);
+    xAxis.setAttribute('y1', 270);
+    xAxis.setAttribute('x2', 360);
+    xAxis.setAttribute('y2', 270);
+    xAxis.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
+    xAxis.setAttribute('stroke-width', '2');
+    gridOverlay.appendChild(xAxis);
+    
+    // Z-Achse: vertikal durch Achsmittelpunkt (Spalte D/E = 180px)
+    const zAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    zAxis.setAttribute('x1', 180);
+    zAxis.setAttribute('y1', 0);
+    zAxis.setAttribute('x2', 180);
+    zAxis.setAttribute('y2', 720);
+    zAxis.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
+    zAxis.setAttribute('stroke-width', '2');
+    gridOverlay.appendChild(zAxis);
+    
+    // Toggle-Funktion: G-Taste drücken
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'g' || e.key === 'G') {
+        gridOverlay.classList.toggle('hidden');
+        console.log('Grid toggled:', !gridOverlay.classList.contains('hidden'));
+      }
     });
   </script>
 </body>
