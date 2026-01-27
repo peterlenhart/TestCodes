@@ -224,8 +224,26 @@
       return texture;
     }
 
-    // Face 5 und Face 2 sind beim Süd-Nord-Kippen sichtbar (siehe Screenshot)
-    // Diese bekommen die 8 Random-Zahlen ohne Wiederholung!
+    // Slot-IDs tracking (ändern sich nach jedem Kipp)
+    // S1→S3, S2→S4, S3→S1, S4→S2
+    let currentSlots = {
+      face5: { S1: randomDeck[2], S2: randomDeck[3], S3: randomDeck[1], S4: randomDeck[0] },
+      face2: { S1: randomDeck[6], S2: randomDeck[7], S3: randomDeck[5], S4: randomDeck[4] }
+    };
+    
+    function swapSlots() {
+      // Nach Kipp: S1→S3, S2→S4, S3→S1, S4→S2
+      for (let face of ['face5', 'face2']) {
+        const old = {...currentSlots[face]};
+        currentSlots[face].S3 = old.S1;
+        currentSlots[face].S4 = old.S2;
+        currentSlots[face].S1 = old.S3;
+        currentSlots[face].S2 = old.S4;
+      }
+      console.log('Slots nach Kipp:', currentSlots);
+    }
+
+    // Face 5 und Face 2: Slots in korrekter Position
     // Face 5: Um 180° gedreht
     // Face 2: Um 90° Uhrzeigersinn gedreht
     const face5_base = [randomDeck[0],'X','X',randomDeck[1],'X','X','X',randomDeck[2],randomDeck[3]];
@@ -242,6 +260,8 @@
       ['X','X','X','X','X','X','X','X','X'],  // Face 4
       face5_rotated  // Face 5 (Süd)
     ];
+    
+    console.log('Start Slots:', currentSlots);
 
     // Create materials for each face (mit Face-Index für Debugging)
     const materials = faceNumbers.map((numbers, index) => 
@@ -386,6 +406,10 @@
     }, { passive: false });
 
     // Animation loop
+    // Track last position to detect when Kipp is complete
+    let lastRotation = pivotGroup.rotation.x;
+    let kippComplete = false;
+
     function animate() {
       requestAnimationFrame(animate);
 
@@ -399,11 +423,26 @@
       if (pivotGroup.rotation.x < minRotation) {
         pivotGroup.rotation.x = minRotation;
         rotationVelocity = 0; // Stop momentum
+        if (!kippComplete && lastRotation > minRotation + 0.1) {
+          swapSlots(); // Kipp zu Nord abgeschlossen
+          kippComplete = true;
+        }
       }
       if (pivotGroup.rotation.x > maxRotation) {
         pivotGroup.rotation.x = maxRotation;
         rotationVelocity = 0; // Stop momentum
+        if (!kippComplete && lastRotation < maxRotation - 0.1) {
+          swapSlots(); // Kipp zu Süd abgeschlossen
+          kippComplete = true;
+        }
       }
+      
+      // Reset kippComplete wenn Würfel wieder in Bewegung
+      if (Math.abs(rotationVelocity) > 0.01) {
+        kippComplete = false;
+      }
+
+      lastRotation = pivotGroup.rotation.x;
 
       // Damping (slow down over time)
       rotationVelocity *= 0.95;
