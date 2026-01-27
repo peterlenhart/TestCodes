@@ -31,12 +31,15 @@
       pointer-events: none;
     }
 
+    #info h2 { font-size: 24px; margin-bottom: 8px; }
+    #info p  { font-size: 16px; opacity: 0.8; }
+
     #backBtn {
       position: absolute;
       bottom: 30px;
       left: 50%;
       transform: translateX(-50%);
-      background: #ead7be;
+      background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(0,0,0,0.05)), #ead7be;
       color: #2a160c;
       border: 3px solid rgba(0,0,0,0.35);
       border-radius: 12px;
@@ -44,203 +47,396 @@
       font-size: 20px;
       font-weight: bold;
       cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       z-index: 10;
-      text-decoration: none;
+    }
+
+    #backBtn:hover {
+      transform: translateX(-50%) translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 <body>
+  <div id="container"></div>
 
-<div id="container"></div>
+  <div id="info">
+    <h2>3×3 Grid Orthographic (ohne Fluchtpunkt)</h2>
+    <p>9 Zahlen pro Fläche, 18 total</p>
+  </div>
 
-<div id="info">
-  <h2>3×3 Grid Orthographic</h2>
-</div>
+  <a href="testindex.html" id="backBtn">WÜRFEL IN DIE BOX</a>
 
-<a href="testindex.html" id="backBtn">WÜRFEL IN DIE BOX</a>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // =========================
+    // OPTIK-ONLY: WebP Holzfläche laden
+    // =========================
+    const WOOD_SRC = 'wuerfelflaeche.webp'; // <-- Pfad/Name hier anpassen, falls nötig
+    const woodImg = new Image();
+    woodImg.crossOrigin = 'anonymous'; // schadet nicht; lokal egal, remote hilfreich
+    let woodReady = false;
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
-/* ============================================================
-   OPTIK: WebP laden (fix, einmalig)
-   ============================================================ */
-const WOOD_SRC = 'wuerfelflaeche.webp';
-const woodImg = new Image();
-woodImg.src = WOOD_SRC;
-let woodReady = false;
-woodImg.onload = () => woodReady = true;
+    // Diese beiden Variablen brauchen wir für das einmalige Redraw nach dem Laden:
+    let materialsRef = null;
+    let faceNumbersRef = null;
 
-/* ============================================================
-   THREE SETUP (unverändert)
-   ============================================================ */
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xd9c3a2);
+    woodImg.onload = () => {
+      woodReady = true;
+      // Wenn Materials schon existieren: Texturen einmalig neu bauen (nur optisch)
+      if (materialsRef && faceNumbersRef) {
+        for (let i = 0; i < materialsRef.length; i++) {
+          const mat = materialsRef[i];
+          if (!mat) continue;
+          if (mat.map) mat.map.dispose();
+          mat.map = createFaceTexture(faceNumbersRef[i], i);
+          mat.needsUpdate = true;
+        }
+        console.log('✅ Wood WebP geladen – Face-Texturen optisch aktualisiert.');
+      }
+    };
+    woodImg.onerror = () => {
+      console.warn('⚠️ Holz-WebP konnte nicht geladen werden:', WOOD_SRC);
+      console.warn('   → Datei-Pfad/Name prüfen. Fallback-Holz (Gradient) bleibt aktiv.');
+    };
+    woodImg.src = WOOD_SRC;
 
-const aspect = window.innerWidth / window.innerHeight;
-const frustumSize = 5;
+    // =========================
+    // Scene Setup
+    // =========================
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xd9c3a2);
 
-const camera = new THREE.OrthographicCamera(
-  frustumSize * aspect / -2,
-  frustumSize * aspect / 2,
-  frustumSize / 2,
-  frustumSize / -2,
-  0.1,
-  1000
-);
-camera.position.set(0, 11, 0);
-camera.lookAt(0, 0, 0);
+    const aspect = window.innerWidth / window.innerHeight;
+    const frustumSize = 5;
+    const camera = new THREE.OrthographicCamera(
+      frustumSize * aspect / -2,
+      frustumSize * aspect / 2,
+      frustumSize / 2,
+      frustumSize / -2,
+      0.1,
+      1000
+    );
+    camera.position.set(0, 11, 0);
+    camera.lookAt(0, 0, 0);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-document.getElementById('container').appendChild(renderer.domElement);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.getElementById('container').appendChild(renderer.domElement);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
-dirLight.position.set(5,5,5);
-scene.add(dirLight);
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
 
-/* ============================================================
-   DECK (wie vorher)
-   ============================================================ */
-function createUniqueRandomDeck() {
-  const deck = [];
-  for (let i = 1; i <= 12; i++) deck.push(i);
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
-  }
-  return deck;
-}
-const randomDeck = createUniqueRandomDeck();
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
 
-/* ============================================================
-   FACE TEXTURE (OPTIK ONLY)
-   F5 wird 90° CW gedreht
-   ============================================================ */
-function createFaceTexture(numbers, faceIndex) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
-
-  if (woodReady) {
-    if (faceIndex === 5) {
-      // F5 → 90° im Uhrzeigersinn
-      ctx.save();
-      ctx.translate(512, 0);
-      ctx.rotate(Math.PI / 2);
-      ctx.drawImage(woodImg, 0, 0, 512, 512);
-      ctx.restore();
-    } else {
-      ctx.drawImage(woodImg, 0, 0, 512, 512);
+    // Create random deck of 1-12 (no duplicates)
+    function createUniqueRandomDeck() {
+      const deck = [];
+      for (let i = 1; i <= 12; i++) deck.push(i);
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      return deck;
     }
-  } else {
-    ctx.fillStyle = '#d7c2a4';
-    ctx.fillRect(0,0,512,512);
-  }
 
-  // Debug Face Index
-  ctx.fillStyle = 'red';
-  ctx.font = 'bold 40px system-ui';
-  ctx.fillText(`F${faceIndex}`, 10, 40);
+    const randomDeck = createUniqueRandomDeck();
 
-  // Grid
-  ctx.strokeStyle = 'rgba(122,74,52,0.4)';
-  ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.moveTo(170,32); ctx.lineTo(170,480); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(342,32); ctx.lineTo(342,480); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(32,170); ctx.lineTo(480,170); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(32,342); ctx.lineTo(480,342); ctx.stroke();
+    // =========================
+    // OPTIK-ONLY: createFaceTexture nutzt WebP als Hintergrund, sonst Fallback
+    // (LOGIK bleibt unangetastet)
+    // =========================
+    function createFaceTexture(numbers, faceIndex) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
 
-  // Numbers
-  ctx.fillStyle = '#2a160c';
-  ctx.font = 'bold 80px system-ui';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+      // --- Hintergrund ---
+      if (woodReady) {
+        // WebP als Würfelfläche (skaliert auf 512x512)
+        ctx.drawImage(woodImg, 0, 0, 512, 512);
+      } else {
+        // Fallback: dein bisheriger Holzgradient (bleibt bis WebP da ist)
+        const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+        gradient.addColorStop(0, '#d7c2a4');
+        gradient.addColorStop(0.5, '#c9b08f');
+        gradient.addColorStop(1, '#d7c2a4');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 512, 512);
 
-  const pos = [
-    [101,101],[256,101],[411,101],
-    [101,256],[256,256],[411,256],
-    [101,411],[256,411],[411,411]
-  ];
+        ctx.strokeStyle = 'rgba(155, 70, 110, 0.08)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 30; i++) {
+          ctx.beginPath();
+          ctx.moveTo(Math.random() * 512, 0);
+          ctx.lineTo(Math.random() * 512, 512);
+          ctx.stroke();
+        }
+      }
 
-  numbers.forEach((n,i)=>{
-    if (n !== 'X') ctx.fillText(n, pos[i][0], pos[i][1]);
-  });
+      // Debug Face Index
+      ctx.fillStyle = 'red';
+      ctx.font = 'bold 40px system-ui';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`F${faceIndex}`, 10, 10);
 
-  return new THREE.CanvasTexture(canvas);
-}
+      // Draw 3x3 grid
+      ctx.strokeStyle = 'rgba(122, 74, 52, 0.4)';
+      ctx.lineWidth = 4;
 
-/* ============================================================
-   FACE NUMBERS (unverändert)
-   ============================================================ */
-const face5_base = [randomDeck[0],'X','X',randomDeck[1],'X','X','X',randomDeck[2],randomDeck[3]];
-const face5_rot = face5_base.slice().reverse();
+      ctx.beginPath(); ctx.moveTo(170, 32); ctx.lineTo(170, 480); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(342, 32); ctx.lineTo(342, 480); ctx.stroke();
 
-const face2_base = [randomDeck[4],'X','X',randomDeck[5],'X','X','X',randomDeck[6],randomDeck[7]];
-const face2_rot = [
-  face2_base[6],face2_base[3],face2_base[0],
-  face2_base[7],face2_base[4],face2_base[1],
-  face2_base[8],face2_base[5],face2_base[2]
-];
+      ctx.beginPath(); ctx.moveTo(32, 170); ctx.lineTo(480, 170); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(32, 342); ctx.lineTo(480, 342); ctx.stroke();
 
-const faceNumbers = [
-  Array(9).fill('X'),
-  Array(9).fill('X'),
-  face2_rot,
-  Array(9).fill('X'),
-  Array(9).fill('X'),
-  face5_rot
-];
+      // Draw numbers in 3x3 grid
+      ctx.fillStyle = '#2a160c';
+      ctx.font = 'bold 80px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
 
-/* ============================================================
-   MATERIALS (fix)
-   ============================================================ */
-const materials = faceNumbers.map((nums,i)=>new THREE.MeshStandardMaterial({
-  map: createFaceTexture(nums,i),
-  roughness: 0.7,
-  metalness: 0.1
-}));
+      const positions = [
+        [101, 101],[256, 101],[411, 101],
+        [101, 256],[256, 256],[411, 256],
+        [101, 411],[256, 411],[411, 411]
+      ];
 
-/* ============================================================
-   CUBE + PIVOT (unverändert)
-   ============================================================ */
-const cube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), materials);
-const pivot = new THREE.Group();
-scene.add(pivot);
+      numbers.forEach((num, i) => {
+        let text;
+        if (num === 'X') {
+          text = '';
+        } else {
+          text = (num === 9 || num === 6) ? `${num}.` : String(num);
+        }
+        ctx.fillText(text, positions[i][0], positions[i][1]);
+      });
 
-const o = Math.sqrt(2)/2;
-cube.position.set(-o, o, o);
-cube.rotation.x = Math.PI/4;
-pivot.add(cube);
-pivot.rotation.x = Math.PI/4;
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      return texture;
+    }
 
-/* ============================================================
-   INPUT + ANIMATION (unverändert)
-   ============================================================ */
-let dragging=false, prevY=0, vel=0;
+    // Slot-IDs tracking (ändern sich nach jedem Kipp) – dein Original
+    let currentSlots = {
+      face5: { S1: randomDeck[2], S2: randomDeck[3], S3: randomDeck[1], S4: randomDeck[0] },
+      face2: { S1: randomDeck[6], S2: randomDeck[7], S3: randomDeck[5], S4: randomDeck[4] }
+    };
 
-renderer.domElement.addEventListener('mousedown',e=>{
-  dragging=true; prevY=e.clientY;
-});
-renderer.domElement.addEventListener('mousemove',e=>{
-  if(!dragging) return;
-  vel=(e.clientY-prevY)*0.005;
-  prevY=e.clientY;
-});
-renderer.domElement.addEventListener('mouseup',()=>dragging=false);
+    function swapSlots() {
+      for (let face of ['face5', 'face2']) {
+        const old = {...currentSlots[face]};
+        currentSlots[face].S3 = old.S1;
+        currentSlots[face].S4 = old.S2;
+        currentSlots[face].S1 = old.S3;
+        currentSlots[face].S2 = old.S4;
+      }
+      console.log('Slots nach Kipp:', currentSlots);
+    }
 
-function animate(){
-  requestAnimationFrame(animate);
-  pivot.rotation.x += vel;
-  pivot.rotation.x = Math.max(-Math.PI/4, Math.min(Math.PI/4, pivot.rotation.x));
-  vel *= 0.95;
-  renderer.render(scene,camera);
-}
-animate();
+    // Face 5 und Face 2: Slots in korrekter Position (dein Original)
+    const face5_base = [randomDeck[0],'X','X',randomDeck[1],'X','X','X',randomDeck[2],randomDeck[3]];
+    const face5_rotated = [face5_base[8],face5_base[7],face5_base[6],face5_base[5],face5_base[4],face5_base[3],face5_base[2],face5_base[1],face5_base[0]];
 
-</script>
+    const face2_base = [randomDeck[4],'X','X',randomDeck[5],'X','X','X',randomDeck[6],randomDeck[7]];
+    const face2_rotated = [face2_base[6],face2_base[3],face2_base[0],face2_base[7],face2_base[4],face2_base[1],face2_base[8],face2_base[5],face2_base[2]];
+
+    const faceNumbers = [
+      ['X','X','X','X','X','X','X','X','X'],
+      ['X','X','X','X','X','X','X','X','X'],
+      face2_rotated,
+      ['X','X','X','X','X','X','X','X','X'],
+      ['X','X','X','X','X','X','X','X','X'],
+      face5_rotated
+    ];
+
+    console.log('Start Slots:', currentSlots);
+
+    // Create materials for each face (dein Original)
+    const materials = faceNumbers.map((numbers, index) =>
+      new THREE.MeshStandardMaterial({
+        map: createFaceTexture(numbers, index),
+        roughness: 0.7,
+        metalness: 0.1
+      })
+    );
+
+    // Referenzen für das einmalige Redraw nach WebP-Load
+    materialsRef = materials;
+    faceNumbersRef = faceNumbers;
+
+    // Create cube
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const cube = new THREE.Mesh(geometry, materials);
+
+    // Create pivot group
+    const pivotGroup = new THREE.Group();
+    scene.add(pivotGroup);
+
+    const edgeOffset = Math.sqrt(2) / 2;
+
+    cube.position.x = -edgeOffset;
+    cube.position.y = edgeOffset;
+    cube.position.z = edgeOffset;
+
+    cube.rotation.x = Math.PI / 4;
+    pivotGroup.add(cube);
+
+    pivotGroup.rotation.x = Math.PI / 4;
+
+    // Manual rotation controls (only vertical movement)
+    let isDragging = false;
+    let previousMouseY = 0;
+    let rotationVelocity = 0;
+
+    // Pinch-to-zoom variables
+    let isPinching = false;
+    let previousPinchDistance = 0;
+    let currentFrustumSize = frustumSize;
+    const minFrustumSize = 2;
+    const maxFrustumSize = 10;
+
+    function getDistance(touch1, touch2) {
+      const dx = touch2.clientX - touch1.clientX;
+      const dy = touch2.clientY - touch1.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function updateCameraZoom() {
+      const aspect = window.innerWidth / window.innerHeight;
+      camera.left = currentFrustumSize * aspect / -2;
+      camera.right = currentFrustumSize * aspect / 2;
+      camera.top = currentFrustumSize / 2;
+      camera.bottom = currentFrustumSize / -2;
+      camera.updateProjectionMatrix();
+    }
+
+    function onMouseDown(e) {
+      isDragging = true;
+      previousMouseY = e.clientY || e.touches[0].clientY;
+    }
+
+    function onMouseMove(e) {
+      if (!isDragging) return;
+      const currentY = e.clientY || e.touches[0].clientY;
+      const deltaY = currentY - previousMouseY;
+      rotationVelocity = deltaY * 0.005;
+      previousMouseY = currentY;
+    }
+
+    function onMouseUp() { isDragging = false; }
+
+    function onTouchStart(e) {
+      if (e.touches.length === 2) {
+        isPinching = true;
+        isDragging = false;
+        previousPinchDistance = getDistance(e.touches[0], e.touches[1]);
+        e.preventDefault();
+      } else if (e.touches.length === 1) {
+        isPinching = false;
+        onMouseDown(e);
+      }
+    }
+
+    function onTouchMove(e) {
+      if (isPinching && e.touches.length === 2) {
+        const currentDistance = getDistance(e.touches[0], e.touches[1]);
+        const delta = previousPinchDistance - currentDistance;
+
+        currentFrustumSize += delta * 0.01;
+        currentFrustumSize = Math.max(minFrustumSize, Math.min(maxFrustumSize, currentFrustumSize));
+
+        updateCameraZoom();
+        previousPinchDistance = currentDistance;
+        e.preventDefault();
+      } else if (!isPinching && e.touches.length === 1) {
+        onMouseMove(e);
+      }
+    }
+
+    function onTouchEnd(e) {
+      if (e.touches.length < 2) isPinching = false;
+      if (e.touches.length === 0) isDragging = false;
+    }
+
+    // Event listeners
+    renderer.domElement.addEventListener('mousedown', onMouseDown);
+    renderer.domElement.addEventListener('mousemove', onMouseMove);
+    renderer.domElement.addEventListener('mouseup', onMouseUp);
+    renderer.domElement.addEventListener('mouseleave', onMouseUp);
+
+    renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+    renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+    renderer.domElement.addEventListener('touchend', onTouchEnd);
+
+    renderer.domElement.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      currentFrustumSize += e.deltaY * 0.01;
+      currentFrustumSize = Math.max(minFrustumSize, Math.min(maxFrustumSize, currentFrustumSize));
+      updateCameraZoom();
+    }, { passive: false });
+
+    // Animation loop (dein Original)
+    let lastRotation = pivotGroup.rotation.x;
+    let kippComplete = false;
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      pivotGroup.rotation.x += rotationVelocity;
+
+      const minRotation = -Math.PI / 4;
+      const maxRotation = Math.PI / 4;
+
+      if (pivotGroup.rotation.x < minRotation) {
+        pivotGroup.rotation.x = minRotation;
+        rotationVelocity = 0;
+        if (!kippComplete && lastRotation > minRotation + 0.1) {
+          swapSlots();
+          kippComplete = true;
+        }
+      }
+      if (pivotGroup.rotation.x > maxRotation) {
+        pivotGroup.rotation.x = maxRotation;
+        rotationVelocity = 0;
+        if (!kippComplete && lastRotation < maxRotation - 0.1) {
+          swapSlots();
+          kippComplete = true;
+        }
+      }
+
+      if (Math.abs(rotationVelocity) > 0.01) {
+        kippComplete = false;
+      }
+
+      lastRotation = pivotGroup.rotation.x;
+
+      rotationVelocity *= 0.95;
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Resize
+    window.addEventListener('resize', () => {
+      const aspect = window.innerWidth / window.innerHeight;
+      camera.left = currentFrustumSize * aspect / -2;
+      camera.right = currentFrustumSize * aspect / 2;
+      camera.top = currentFrustumSize / 2;
+      camera.bottom = currentFrustumSize / -2;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
 </body>
 </html>
