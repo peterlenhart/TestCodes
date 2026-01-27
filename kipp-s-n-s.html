@@ -155,38 +155,38 @@
     // =========================
     function createFaceTexture(numbers, faceIndex) {
       const canvas = document.createElement('canvas');
-      canvas.width = 512;
-      canvas.height = 512;
+      canvas.width = 426;
+      canvas.height = 426;
       const ctx = canvas.getContext('2d');
 
       // --- Hintergrund ---
       if (woodReady) {
-        // WebP als Würfelfläche (skaliert auf 512x512)
+        // WebP als Würfelfläche (skaliert auf 426x426)
         // Für F5: 90° im Uhrzeigersinn drehen
         if (faceIndex === 5) {
           ctx.save();
-          ctx.translate(512, 0);
+          ctx.translate(426, 0);
           ctx.rotate(Math.PI / 2);
-          ctx.drawImage(woodImg, 0, 0, 512, 512);
+          ctx.drawImage(woodImg, 0, 0, 426, 426);
           ctx.restore();
         } else {
-          ctx.drawImage(woodImg, 0, 0, 512, 512);
+          ctx.drawImage(woodImg, 0, 0, 426, 426);
         }
       } else {
         // Fallback: dein bisheriger Holzgradient (bleibt bis WebP da ist)
-        const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+        const gradient = ctx.createLinearGradient(0, 0, 426, 426);
         gradient.addColorStop(0, '#d7c2a4');
         gradient.addColorStop(0.5, '#c9b08f');
         gradient.addColorStop(1, '#d7c2a4');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 512, 512);
+        ctx.fillRect(0, 0, 426, 426);
 
         ctx.strokeStyle = 'rgba(155, 70, 110, 0.08)';
         ctx.lineWidth = 2;
         for (let i = 0; i < 30; i++) {
           ctx.beginPath();
-          ctx.moveTo(Math.random() * 512, 0);
-          ctx.lineTo(Math.random() * 512, 512);
+          ctx.moveTo(Math.random() * 426, 0);
+          ctx.lineTo(Math.random() * 426, 426);
           ctx.stroke();
         }
       }
@@ -202,11 +202,11 @@
       ctx.strokeStyle = 'rgba(122, 74, 52, 0.4)';
       ctx.lineWidth = 4;
 
-      ctx.beginPath(); ctx.moveTo(170, 32); ctx.lineTo(170, 480); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(342, 32); ctx.lineTo(342, 480); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(141, 27); ctx.lineTo(141, 399); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(285, 27); ctx.lineTo(285, 399); ctx.stroke();
 
-      ctx.beginPath(); ctx.moveTo(32, 170); ctx.lineTo(480, 170); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(32, 342); ctx.lineTo(480, 342); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(27, 141); ctx.lineTo(399, 141); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(27, 285); ctx.lineTo(399, 285); ctx.stroke();
 
       // Draw numbers in 3x3 grid
       ctx.fillStyle = '#2a160c';
@@ -215,9 +215,9 @@
       ctx.textBaseline = 'middle';
 
       const positions = [
-        [101, 101],[256, 101],[411, 101],
-        [101, 256],[256, 256],[411, 256],
-        [101, 411],[256, 411],[411, 411]
+        [84, 84],[213, 84],[342, 84],
+        [84, 213],[213, 213],[342, 213],
+        [84, 342],[213, 342],[342, 342]
       ];
 
       numbers.forEach((num, i) => {
