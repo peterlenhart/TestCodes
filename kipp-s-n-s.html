@@ -162,7 +162,16 @@
       // --- Hintergrund ---
       if (woodReady) {
         // WebP als Würfelfläche (skaliert auf 512x512)
-        ctx.drawImage(woodImg, 0, 0, 512, 512);
+        // Für F5: 90° im Uhrzeigersinn drehen
+        if (faceIndex === 5) {
+          ctx.save();
+          ctx.translate(512, 0);
+          ctx.rotate(Math.PI / 2);
+          ctx.drawImage(woodImg, 0, 0, 512, 512);
+          ctx.restore();
+        } else {
+          ctx.drawImage(woodImg, 0, 0, 512, 512);
+        }
       } else {
         // Fallback: dein bisheriger Holzgradient (bleibt bis WebP da ist)
         const gradient = ctx.createLinearGradient(0, 0, 512, 512);
