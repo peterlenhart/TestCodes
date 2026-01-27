@@ -65,18 +65,16 @@
     // =========================
     // OPTIK-ONLY: WebP Holzfläche laden
     // =========================
-    const WOOD_SRC = 'wuerfelflaeche.webp'; // <-- Pfad/Name hier anpassen, falls nötig
+    const WOOD_SRC = 'wuerfelflaeche.webp';
     const woodImg = new Image();
-    woodImg.crossOrigin = 'anonymous'; // schadet nicht; lokal egal, remote hilfreich
+    woodImg.crossOrigin = 'anonymous';
     let woodReady = false;
 
-    // Diese beiden Variablen brauchen wir für das einmalige Redraw nach dem Laden:
     let materialsRef = null;
     let faceNumbersRef = null;
 
     woodImg.onload = () => {
       woodReady = true;
-      // Wenn Materials schon existieren: Texturen einmalig neu bauen (nur optisch)
       if (materialsRef && faceNumbersRef) {
         for (let i = 0; i < materialsRef.length; i++) {
           const mat = materialsRef[i];
@@ -85,59 +83,48 @@
           mat.map = createFaceTexture(faceNumbersRef[i], i);
           mat.needsUpdate = true;
         }
-        console.log('✅ Wood WebP geladen – Face-Texturen optisch aktualisiert.');
+        console.log('✅ Wood WebP geladen – Face-Texturen aktualisiert');
       }
     };
-    woodImg.onerror = () => {
-      console.warn('⚠️ Holz-WebP konnte nicht geladen werden:', WOOD_SRC);
-      console.warn('   → Datei-Pfad/Name prüfen. Fallback-Holz (Gradient) bleibt aktiv.');
-    };
+    woodImg.onerror = () => console.warn('⚠️ Holz-WebP nicht geladen → Fallback verwendet');
     woodImg.src = WOOD_SRC;
 
     // =========================
     // Scene Setup
     // =========================
-    // KOORDINATENSYSTEM:
-    // Spalten: A(0-45px), B(45-90px), C(90-135px), D(135-180px), E(180-225px), F(225-270px), G(270-315px), H(315-360px)
-    // Zeilen: 1(0-45px), 2(45-90px), 3(90-135px), 4(135-180px), 5(180-225px), 6(225-270px), 7(270-315px), ...
-    // Würfel-Nullpunkt (x=0, z=0): Zwischen D/E (180px), zwischen Zeile 6/7 (270px)
-    
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x3f1a14); // Mahagoni schwarz-rot-braun
+    scene.background = new THREE.Color(0x3f1a14);
 
-    const containerWidth = 360;  // Feste Breite
-    const containerHeight = 720; // FESTE Höhe (Design-Resolution!)
-    
-    const aspect = containerWidth / containerHeight; // 0.5
-    const frustumSize = 2.5;
+    const containerWidth  = 360;
+    const containerHeight = 720;
+    const aspect = containerWidth / containerHeight;
+
+    const frustumSize = 3.0;   // etwas größer → mehr Platz um den 135-px-Würfel
+
     const camera = new THREE.OrthographicCamera(
       frustumSize * aspect / -2,
-      frustumSize * aspect / 2,
-      frustumSize / 2,
+      frustumSize * aspect /  2,
+      frustumSize /  2,
       frustumSize / -2,
-      0.1,
-      1000
+      0.1, 1000
     );
-    camera.position.set(0, 11, 0);
+    camera.position.set(0, 12, 0);
     camera.lookAt(0, 0, 0);
-    
+
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(360, 720); // FESTE 720px!
+    renderer.setSize(containerWidth, containerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     document.getElementById('container').appendChild(renderer.domElement);
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(ambientLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight.position.set(5, 8, 6);
+    scene.add(dirLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    directionalLight.position.set(5, 5, 5);
-    scene.add(directionalLight);
-
-    // Create random deck of 1-12 (no duplicates)
+    // Random Zahlen 1–12
     function createUniqueRandomDeck() {
-      const deck = [];
-      for (let i = 1; i <= 12; i++) deck.push(i);
+      const deck = Array.from({length:12}, (_,i)=>i+1);
       for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -148,19 +135,14 @@
     const randomDeck = createUniqueRandomDeck();
 
     // =========================
-    // OPTIK-ONLY: createFaceTexture nutzt WebP als Hintergrund, sonst Fallback
-    // (LOGIK bleibt unangetastet)
+    // Face-Textur mit Holz oder Fallback
     // =========================
     function createFaceTexture(numbers, faceIndex) {
       const canvas = document.createElement('canvas');
-      canvas.width = 426;
-      canvas.height = 426;
+      canvas.width = canvas.height = 426;
       const ctx = canvas.getContext('2d');
 
-      // --- Hintergrund ---
       if (woodReady) {
-        // WebP als Würfelfläche (skaliert auf 426x426)
-        // Für F5: 90° im Uhrzeigersinn drehen
         if (faceIndex === 5) {
           ctx.save();
           ctx.translate(426, 0);
@@ -171,86 +153,64 @@
           ctx.drawImage(woodImg, 0, 0, 426, 426);
         }
       } else {
-        // Fallback: dein bisheriger Holzgradient (bleibt bis WebP da ist)
-        const gradient = ctx.createLinearGradient(0, 0, 426, 426);
-        gradient.addColorStop(0, '#d7c2a4');
+        const gradient = ctx.createLinearGradient(0,0,426,426);
+        gradient.addColorStop(0,   '#d7c2a4');
         gradient.addColorStop(0.5, '#c9b08f');
-        gradient.addColorStop(1, '#d7c2a4');
+        gradient.addColorStop(1,   '#d7c2a4');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 426, 426);
-
-        ctx.strokeStyle = 'rgba(155, 70, 110, 0.08)';
-        ctx.lineWidth = 2;
-        for (let i = 0; i < 30; i++) {
-          ctx.beginPath();
-          ctx.moveTo(Math.random() * 426, 0);
-          ctx.lineTo(Math.random() * 426, 426);
-          ctx.stroke();
-        }
+        ctx.fillRect(0,0,426,426);
       }
 
-      // Debug Face Index
-      ctx.fillStyle = 'red';
-      ctx.font = 'bold 40px system-ui';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(`F${faceIndex}`, 10, 10);
-
-      // Draw 3x3 grid
-      ctx.strokeStyle = 'rgba(122, 74, 52, 0.4)';
+      // 3×3 Gitter
+      ctx.strokeStyle = 'rgba(122,74,52,0.4)';
       ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(141,27);  ctx.lineTo(141,399);  ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(285,27);  ctx.lineTo(285,399);  ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(27,141);  ctx.lineTo(399,141);  ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(27,285);  ctx.lineTo(399,285);  ctx.stroke();
 
-      ctx.beginPath(); ctx.moveTo(141, 27); ctx.lineTo(141, 399); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(285, 27); ctx.lineTo(285, 399); ctx.stroke();
-
-      ctx.beginPath(); ctx.moveTo(27, 141); ctx.lineTo(399, 141); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(27, 285); ctx.lineTo(399, 285); ctx.stroke();
-
-      // Draw numbers in 3x3 grid
+      // Zahlen
       ctx.fillStyle = '#2a160c';
       ctx.font = 'bold 80px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      const positions = [
-        [84, 84],[213, 84],[342, 84],
-        [84, 213],[213, 213],[342, 213],
-        [84, 342],[213, 342],[342, 342]
+      const pos = [
+        [84,84], [213,84], [342,84],
+        [84,213],[213,213],[342,213],
+        [84,342],[213,342],[342,342]
       ];
 
-      numbers.forEach((num, i) => {
-        let text;
-        if (num === 'X') {
-          text = '';
-        } else {
-          text = (num === 9 || num === 6) ? `${num}.` : String(num);
-        }
-        ctx.fillText(text, positions[i][0], positions[i][1]);
+      numbers.forEach((n, i) => {
+        if (n === 'X') return;
+        const txt = (n === 6 || n === 9) ? n + '.' : String(n);
+        ctx.fillText(txt, pos[i][0], pos[i][1]);
       });
 
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.needsUpdate = true;
-      return texture;
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.needsUpdate = true;
+      return tex;
     }
 
-    // Slot-IDs tracking (ändern sich nach jedem Kipp) – dein Original
+    // =========================
+    // Slots & Kipp-Logik
+    // =========================
     let currentSlots = {
       face5: { S1: randomDeck[2], S2: randomDeck[3], S3: randomDeck[1], S4: randomDeck[0] },
       face2: { S1: randomDeck[6], S2: randomDeck[7], S3: randomDeck[5], S4: randomDeck[4] }
     };
 
     function swapSlots() {
-      for (let face of ['face5', 'face2']) {
+      for (let face of ['face5','face2']) {
         const old = {...currentSlots[face]};
         currentSlots[face].S3 = old.S1;
         currentSlots[face].S4 = old.S2;
         currentSlots[face].S1 = old.S3;
         currentSlots[face].S2 = old.S4;
       }
-      console.log('Slots nach Kipp:', currentSlots);
     }
 
-    // Face 5 und Face 2: Slots in korrekter Position (dein Original)
+    // Face-Definitionen
     const face5_base = [randomDeck[0],'X','X',randomDeck[1],'X','X','X',randomDeck[2],randomDeck[3]];
     const face5_rotated = [face5_base[8],face5_base[7],face5_base[6],face5_base[5],face5_base[4],face5_base[3],face5_base[2],face5_base[1],face5_base[0]];
 
@@ -258,139 +218,120 @@
     const face2_rotated = [face2_base[6],face2_base[3],face2_base[0],face2_base[7],face2_base[4],face2_base[1],face2_base[8],face2_base[5],face2_base[2]];
 
     const faceNumbers = [
-      ['X','X','X','X','X','X','X','X','X'],
-      ['X','X','X','X','X','X','X','X','X'],
-      face2_rotated,
-      ['X','X','X','X','X','X','X','X','X'],
-      ['X','X','X','X','X','X','X','X','X'],
-      face5_rotated
+      Array(9).fill('X'),           // 0
+      Array(9).fill('X'),           // 1
+      face2_rotated,                // 2 (oben nach Kipp)
+      Array(9).fill('X'),           // 3
+      Array(9).fill('X'),           // 4
+      face5_rotated                 // 5 (vorne)
     ];
 
-    console.log('Start Slots:', currentSlots);
-
-    // Create materials for each face (dein Original)
-    const materials = faceNumbers.map((numbers, index) =>
+    const materials = faceNumbers.map((nums, i) =>
       new THREE.MeshStandardMaterial({
-        map: createFaceTexture(numbers, index),
+        map: createFaceTexture(nums, i),
         roughness: 0.7,
         metalness: 0.1
       })
     );
 
-    // Referenzen für das einmalige Redraw nach WebP-Load
     materialsRef = materials;
     faceNumbersRef = faceNumbers;
 
-    // Create cube
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    // Würfel – jetzt Größe 1.5 (≈135 px)
+    const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
     const cube = new THREE.Mesh(geometry, materials);
 
-    // Create pivot group
     const pivotGroup = new THREE.Group();
     scene.add(pivotGroup);
 
-    // ACHSMITTELPUNKT (x=0, z=0): Zwischen Spalte D/E (180px), zwischen Zeile 6/7 (270px)
-    // Nord-Ost-Ecke des Würfels liegt EXAKT auf diesem Achsmittelpunkt
-    // Berechnung: 270px / 720px × 2.5 Einheiten = 0.9375 von oben
-    //             Top (+1.25) - 0.9375 = 0.3125
-    pivotGroup.position.x = 0;      // Zwischen Spalte D und E (180px horizontal)
-    pivotGroup.position.z = 0.3125; // Zwischen Zeile 6 und 7 (270px vertikal)
+    // =============================================
+    // NEUE POSITIONIERUNG – Bottom-Nord auf X-Achse, Bottom-Ost auf Z-Achse
+    // =============================================
+    // Würfel soll mit seiner Süd-West unteren Ecke genau am Ursprung (0,0,0) liegen
+    // → Bottom-Nordkante → entlang positive X
+    // → Bottom-Ostkante  → entlang positive Z
 
-    const edgeOffset = Math.sqrt(2) / 2;
+    const half = 1.5 / 2;           // 0.75
+    cube.position.set( half, half, -half );   // Z negativ → Ostkante auf z=0
 
-    cube.position.x = -edgeOffset;
-    cube.position.y = edgeOffset;
-    cube.position.z = edgeOffset;
-
+    // 45° Drehung um x-Achse (Kippachse bleibt horizontal)
     cube.rotation.x = Math.PI / 4;
+
     pivotGroup.add(cube);
 
+    // Pivot selbst wird um x-Achse gekippt
     pivotGroup.rotation.x = Math.PI / 4;
 
-    // Manual rotation controls (only vertical movement)
+    // =============================================
+    // Drag / Touch Steuerung (nur vertikal)
+    // =============================================
     let isDragging = false;
-    let previousMouseY = 0;
-    let rotationVelocity = 0;
+    let previousY = 0;
+    let velocity = 0;
 
-    function onMouseDown(e) {
+    function pointerDown(e) {
       isDragging = true;
-      previousMouseY = e.clientY || e.touches[0].clientY;
+      previousY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+      e.preventDefault();
     }
 
-    function onMouseMove(e) {
+    function pointerMove(e) {
       if (!isDragging) return;
-      const currentY = e.clientY || e.touches[0].clientY;
-      const deltaY = currentY - previousMouseY;
-      rotationVelocity = deltaY * 0.005;
-      previousMouseY = currentY;
+      const y = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+      const dy = y - previousY;
+      velocity = dy * 0.004;
+      previousY = y;
+      e.preventDefault();
     }
 
-    function onMouseUp() { isDragging = false; }
-
-    function onTouchStart(e) {
-      if (e.touches.length === 1) {
-        onMouseDown(e);
-      }
+    function pointerUp() {
+      isDragging = false;
     }
 
-    function onTouchMove(e) {
-      if (e.touches.length === 1) {
-        onMouseMove(e);
-      }
-    }
+    const el = renderer.domElement;
+    el.addEventListener('mousedown',   pointerDown);
+    el.addEventListener('mousemove',   pointerMove);
+    el.addEventListener('mouseup',     pointerUp);
+    el.addEventListener('mouseleave',  pointerUp);
 
-    function onTouchEnd(e) {
-      if (e.touches.length === 0) {
-        isDragging = false;
-      }
-    }
+    el.addEventListener('touchstart',  pointerDown, {passive:false});
+    el.addEventListener('touchmove',   pointerMove, {passive:false});
+    el.addEventListener('touchend',    pointerUp);
+    el.addEventListener('touchcancel', pointerUp);
 
-    // Event listeners
-    renderer.domElement.addEventListener('mousedown', onMouseDown);
-    renderer.domElement.addEventListener('mousemove', onMouseMove);
-    renderer.domElement.addEventListener('mouseup', onMouseUp);
-    renderer.domElement.addEventListener('mouseleave', onMouseUp);
-
-    renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
-    renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
-    renderer.domElement.addEventListener('touchend', onTouchEnd);
-
-    // Animation loop (dein Original)
-    let lastRotation = pivotGroup.rotation.x;
-    let kippComplete = false;
+    // Animation
+    let lastRot = pivotGroup.rotation.x;
+    let kippDone = false;
 
     function animate() {
       requestAnimationFrame(animate);
 
-      pivotGroup.rotation.x += rotationVelocity;
+      pivotGroup.rotation.x += velocity;
 
-      const minRotation = -Math.PI / 4;
-      const maxRotation = Math.PI / 4;
+      const min = -Math.PI/4;
+      const max =  Math.PI/4;
 
-      if (pivotGroup.rotation.x < minRotation) {
-        pivotGroup.rotation.x = minRotation;
-        rotationVelocity = 0;
-        if (!kippComplete && lastRotation > minRotation + 0.1) {
+      if (pivotGroup.rotation.x < min) {
+        pivotGroup.rotation.x = min;
+        velocity = 0;
+        if (!kippDone && lastRot > min + 0.08) {
           swapSlots();
-          kippComplete = true;
+          kippDone = true;
         }
       }
-      if (pivotGroup.rotation.x > maxRotation) {
-        pivotGroup.rotation.x = maxRotation;
-        rotationVelocity = 0;
-        if (!kippComplete && lastRotation < maxRotation - 0.1) {
+      if (pivotGroup.rotation.x > max) {
+        pivotGroup.rotation.x = max;
+        velocity = 0;
+        if (!kippDone && lastRot < max - 0.08) {
           swapSlots();
-          kippComplete = true;
+          kippDone = true;
         }
       }
 
-      if (Math.abs(rotationVelocity) > 0.01) {
-        kippComplete = false;
-      }
+      if (Math.abs(velocity) > 0.008) kippDone = false;
 
-      lastRotation = pivotGroup.rotation.x;
-
-      rotationVelocity *= 0.95;
+      lastRot = pivotGroup.rotation.x;
+      velocity *= 0.94;
 
       renderer.render(scene, camera);
     }
@@ -398,65 +339,48 @@
     animate();
 
     // =========================
-    // Grid Overlay Setup
+    // Grid-Overlay unverändert
     // =========================
-    const gridOverlay = document.getElementById('grid-overlay');
-    const gridSize = 45; // 360px ÷ 8 = 45px
-    const gridHeight = 720; // FESTE Höhe (wie Canvas!)
-    
-    gridOverlay.setAttribute('viewBox', `0 0 360 ${gridHeight}`);
-    gridOverlay.setAttribute('width', '360');
-    gridOverlay.setAttribute('height', gridHeight);
-    
-    // Vertikale Linien (8 Spalten)
+    const grid = document.getElementById('grid-overlay');
+    const gs = 45;
+    grid.setAttribute('viewBox', `0 0 360 720`);
+    grid.setAttribute('width', '360');
+    grid.setAttribute('height', '720');
+
     for (let i = 0; i <= 8; i++) {
-      const x = i * gridSize;
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', x);
-      line.setAttribute('y1', 0);
-      line.setAttribute('x2', x);
-      line.setAttribute('y2', gridHeight);
-      gridOverlay.appendChild(line);
+      const x = i * gs;
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',x); line.setAttribute('x2',x);
+      line.setAttribute('y1',0); line.setAttribute('y2',720);
+      grid.appendChild(line);
     }
-    
-    // Horizontale Linien (alle 45px bis 720px)
-    const rows = Math.ceil(gridHeight / gridSize); // 16 Zeilen
-    for (let i = 0; i <= rows; i++) {
-      const y = i * gridSize;
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', 0);
-      line.setAttribute('y1', y);
-      line.setAttribute('x2', 360);
-      line.setAttribute('y2', y);
-      gridOverlay.appendChild(line);
+
+    for (let i = 0; i <= 16; i++) {
+      const y = i * gs;
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',0); line.setAttribute('x2',360);
+      line.setAttribute('y1',y); line.setAttribute('y2',y);
+      grid.appendChild(line);
     }
-    
-    // ACHSEN einzeichnen (hellweiß)
-    // X-Achse: horizontal durch Achsmittelpunkt (Zeile 6/7 = 270px)
-    const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    xAxis.setAttribute('x1', 0);
-    xAxis.setAttribute('y1', 270);
-    xAxis.setAttribute('x2', 360);
-    xAxis.setAttribute('y2', 270);
-    xAxis.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
-    xAxis.setAttribute('stroke-width', '2');
-    gridOverlay.appendChild(xAxis);
-    
-    // Z-Achse: vertikal durch Achsmittelpunkt (Spalte D/E = 180px)
-    const zAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    zAxis.setAttribute('x1', 180);
-    zAxis.setAttribute('y1', 0);
-    zAxis.setAttribute('x2', 180);
-    zAxis.setAttribute('y2', 720);
-    zAxis.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
-    zAxis.setAttribute('stroke-width', '2');
-    gridOverlay.appendChild(zAxis);
-    
-    // Toggle-Funktion: G-Taste drücken
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'g' || e.key === 'G') {
-        gridOverlay.classList.toggle('hidden');
-        console.log('Grid toggled:', !gridOverlay.classList.contains('hidden'));
+
+    // Achsen
+    const xAchs = document.createElementNS('http://www.w3.org/2000/svg','line');
+    xAchs.setAttribute('x1',0);   xAchs.setAttribute('x2',360);
+    xAchs.setAttribute('y1',270); xAchs.setAttribute('y2',270);
+    xAchs.setAttribute('stroke','rgba(255,255,255,0.9)');
+    xAchs.setAttribute('stroke-width',2);
+    grid.appendChild(xAchs);
+
+    const zAchs = document.createElementNS('http://www.w3.org/2000/svg','line');
+    zAchs.setAttribute('x1',180); zAchs.setAttribute('x2',180);
+    zAchs.setAttribute('y1',0);   zAchs.setAttribute('y2',720);
+    zAchs.setAttribute('stroke','rgba(255,255,255,0.9)');
+    zAchs.setAttribute('stroke-width',2);
+    grid.appendChild(zAchs);
+
+    document.addEventListener('keydown', e => {
+      if (e.key.toLowerCase() === 'g') {
+        grid.classList.toggle('hidden');
       }
     });
   </script>
