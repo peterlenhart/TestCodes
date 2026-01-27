@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kipp Test - 3x3 Grid Perspective - CUBE BOX</title>
+  <title>Kipp Test - 3x3 Ortho - CUBE BOX</title>
   <style>
     * {
       margin: 0;
@@ -79,8 +79,8 @@
   <div id="container"></div>
   
   <div id="info">
-    <h2>3×3 Grid mit Fluchtpunkt-Perspektive</h2>
-    <p>Vertikale Achse durch Nullpunkt unverzerrt</p>
+    <h2>3×3 Grid Orthographic (ohne Fluchtpunkt)</h2>
+    <p>9 Zahlen pro Fläche, 18 total</p>
   </div>
 
   <a href="testindex.html" id="backBtn">WÜRFEL IN DIE BOX</a>
@@ -92,14 +92,17 @@
     scene.background = new THREE.Color(0xd9c3a2);
 
     const aspect = window.innerWidth / window.innerHeight;
-    const camera = new THREE.PerspectiveCamera(
-      30,      // FOV kleiner = engerer Winkel = größerer Würfel
-      aspect,  
-      0.1,     
-      1000     
+    const frustumSize = 5;
+    const camera = new THREE.OrthographicCamera(
+      frustumSize * aspect / -2,
+      frustumSize * aspect / 2,
+      frustumSize / 2,
+      frustumSize / -2,
+      0.1,
+      1000
     );
-    camera.position.set(0, 35, 0); // Viel höher (statt 11)
-    camera.lookAt(0, 0, 0);
+    camera.position.set(0, 11, 0); // Über Szene
+    camera.lookAt(0, 0, 0); // Schaut auf Koordinaten-Nullpunkt (Display-Mitte)
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -114,14 +117,12 @@
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
 
-    // Create random deck of 1-27 (no duplicates)
+    // Create random deck of 1-12 (no duplicates)
     function createUniqueRandomDeck() {
       const deck = [];
-      // Add numbers 1-27 once
-      for (let i = 1; i <= 27; i++) {
+      for (let i = 1; i <= 12; i++) {
         deck.push(i);
       }
-      // Fisher-Yates shuffle
       for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -130,10 +131,10 @@
     }
 
     const randomDeck = createUniqueRandomDeck();
-    console.log('Random Deck (1-27, keine Wiederholung):', randomDeck);
 
-    // Create texture for each face with 9 numbers (3x3 grid)
+    // Create texture for each face with 4 numbers (2x2 grid)
     function createFaceTexture(numbers, faceIndex) {
+      // 3x3 grid version
       const canvas = document.createElement('canvas');
       canvas.width = 512;
       canvas.height = 512;
@@ -223,21 +224,24 @@
       return texture;
     }
 
-    // Face 5 (Süd Start) und Face 2 (Nord nach Kipp) sind sichtbar
-    // Jede Face bekommt 9 Random-Zahlen (3x3 Grid)
-    const faceNumbers = [
-      ['X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],  // Face 0 - nicht sichtbar
-      ['X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],  // Face 1 - nicht sichtbar
-      [randomDeck[9], randomDeck[10], randomDeck[11], randomDeck[12], randomDeck[13], randomDeck[14], randomDeck[15], randomDeck[16], randomDeck[17]], // Face 2 (Nord)
-      ['X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],  // Face 3 - nicht sichtbar
-      ['X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],  // Face 4 - nicht sichtbar
-      [randomDeck[0], randomDeck[1], randomDeck[2], randomDeck[3], randomDeck[4], randomDeck[5], randomDeck[6], randomDeck[7], randomDeck[8]]  // Face 5 (Süd Start)
-    ];
+    // Face 5 und Face 2 sind beim Süd-Nord-Kippen sichtbar (siehe Screenshot)
+    // Diese bekommen die 8 Random-Zahlen ohne Wiederholung!
+    // Face 5: Um 180° gedreht
+    // Face 2: Um 90° Uhrzeigersinn gedreht
+    const face5_base = [randomDeck[0],'X','X',randomDeck[1],'X','X','X',randomDeck[2],randomDeck[3]];
+    const face5_rotated = [face5_base[8],face5_base[7],face5_base[6],face5_base[5],face5_base[4],face5_base[3],face5_base[2],face5_base[1],face5_base[0]]; // 180°
     
-    console.log('18 Random-Zahlen (F5 Süd + F2 Nord):', [
-      ...faceNumbers[5], 
-      ...faceNumbers[2]
-    ]);
+    const face2_base = [randomDeck[4],'X','X',randomDeck[5],'X','X','X',randomDeck[6],randomDeck[7]];
+    const face2_rotated = [face2_base[6],face2_base[3],face2_base[0],face2_base[7],face2_base[4],face2_base[1],face2_base[8],face2_base[5],face2_base[2]]; // 90° Uhrzeiger
+    
+    const faceNumbers = [
+      ['X','X','X','X','X','X','X','X','X'],  // Face 0
+      ['X','X','X','X','X','X','X','X','X'],  // Face 1
+      face2_rotated,  // Face 2 (Nord)
+      ['X','X','X','X','X','X','X','X','X'],  // Face 3
+      ['X','X','X','X','X','X','X','X','X'],  // Face 4
+      face5_rotated  // Face 5 (Süd)
+    ];
 
     // Create materials for each face (mit Face-Index für Debugging)
     const materials = faceNumbers.map((numbers, index) => 
@@ -277,12 +281,12 @@
     let previousMouseY = 0;
     let rotationVelocity = 0;
     
-    // Pinch-to-zoom variables (für Perspective Camera)
+    // Pinch-to-zoom variables
     let isPinching = false;
     let previousPinchDistance = 0;
-    let currentFOV = 50;  // Field of View statt frustumSize
-    const minFOV = 20;    // Näher heran (engerer Winkel)
-    const maxFOV = 80;    // Weiter weg (weiterer Winkel)
+    let currentFrustumSize = frustumSize;
+    const minFrustumSize = 2;  // Max zoom in
+    const maxFrustumSize = 10; // Max zoom out
 
     function getDistance(touch1, touch2) {
       const dx = touch2.clientX - touch1.clientX;
@@ -291,7 +295,11 @@
     }
     
     function updateCameraZoom() {
-      camera.fov = currentFOV;  // Field of View ändern
+      const aspect = window.innerWidth / window.innerHeight;
+      camera.left = currentFrustumSize * aspect / -2;
+      camera.right = currentFrustumSize * aspect / 2;
+      camera.top = currentFrustumSize / 2;
+      camera.bottom = currentFrustumSize / -2;
       camera.updateProjectionMatrix();
     }
 
@@ -336,9 +344,9 @@
         const currentDistance = getDistance(e.touches[0], e.touches[1]);
         const delta = previousPinchDistance - currentDistance;
         
-        // Zoom: größere Distanz = kleiner FOV = näher
-        currentFOV += delta * 0.05;
-        currentFOV = Math.max(minFOV, Math.min(maxFOV, currentFOV));
+        // Zoom: größere Distanz = kleiner frustumSize = näher
+        currentFrustumSize += delta * 0.01;
+        currentFrustumSize = Math.max(minFrustumSize, Math.min(maxFrustumSize, currentFrustumSize));
         
         updateCameraZoom();
         
@@ -372,8 +380,8 @@
     // Mouse wheel zoom (Desktop)
     renderer.domElement.addEventListener('wheel', (e) => {
       e.preventDefault();
-      currentFOV += e.deltaY * 0.05;
-      currentFOV = Math.max(minFOV, Math.min(maxFOV, currentFOV));
+      currentFrustumSize += e.deltaY * 0.01;
+      currentFrustumSize = Math.max(minFrustumSize, Math.min(maxFrustumSize, currentFrustumSize));
       updateCameraZoom();
     }, { passive: false });
 
@@ -408,8 +416,10 @@
     // Handle window resize
     window.addEventListener('resize', () => {
       const aspect = window.innerWidth / window.innerHeight;
-      camera.aspect = aspect;
-      camera.fov = currentFOV;
+      camera.left = currentFrustumSize * aspect / -2;
+      camera.right = currentFrustumSize * aspect / 2;
+      camera.top = currentFrustumSize / 2;
+      camera.bottom = currentFrustumSize / -2;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
