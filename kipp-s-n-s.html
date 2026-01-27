@@ -89,7 +89,7 @@
     woodImg.src = WOOD_SRC;
 
     // ────────────────────────────────────────────────
-    // Szene & Kamera – 1 Unit = 45 Pixel
+    // Szene & Kamera – 1 Unit = 45 Pixel, Kamera von hinten (um 180°-Drehung zu korrigieren)
     // ────────────────────────────────────────────────
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x3f1a14);
@@ -108,7 +108,7 @@
       worldHeight / -2,
       0.1, 1000
     );
-    camera.position.set(0, 0, 10);
+    camera.position.set(0, 0, -10);  // Von der anderen Seite schauen (korrigiert "von unten"-Sicht)
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -116,10 +116,10 @@
     renderer.setPixelRatio(window.devicePixelRatio);
     document.getElementById('container').appendChild(renderer.domElement);
 
-    // Beleuchtung
+    // Beleuchtung (angepasst für neue Kameraposition)
     scene.add(new THREE.AmbientLight(0xffffff, 0.65));
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-    dirLight.position.set(4, 8, 5);
+    dirLight.position.set(4, 8, -5);  // Licht von der neuen Vorderseite
     scene.add(dirLight);
 
     // ────────────────────────────────────────────────
@@ -240,7 +240,7 @@
     faceNumbersRef = faceNumbers;
 
     // ────────────────────────────────────────────────
-    // Würfel – 135 px = 3 Units
+    // Würfel – 135 px = 3 Units, Ostkante an Z-Achse (umgekehrt zu West)
     // ────────────────────────────────────────────────
     const cubeSize = 3;
 
@@ -248,9 +248,9 @@
     const cube = new THREE.Mesh(geometry, materials);
 
     // Untere Nordkante → x=0    → Würfelmitte x = +1.5
-    // Untere Ostkante  → z=0    → Würfelmitte z = -1.5
+    // Untere Ostkante  → z=0    → Würfelmitte z = +1.5 (umgekehrt für Ost statt West)
     // Boden            → y=0    → Würfelmitte y = +1.5
-    cube.position.set(cubeSize/2, cubeSize/2, -cubeSize/2);
+    cube.position.set(cubeSize/2, cubeSize/2, cubeSize/2);
 
     cube.rotation.x = Math.PI / 4;
 
@@ -260,8 +260,11 @@
 
     pivotGroup.rotation.x = Math.PI / 4;
 
+    // Eine Rasterzelle weiter südlich (nach unten im Bild = negative y)
+    pivotGroup.position.y = -1;
+
     // ────────────────────────────────────────────────
-    // Drag / Touch
+    // Drag / Touch – Bewegungsrichtung umkehren
     // ────────────────────────────────────────────────
     let isDragging = false;
     let prevY = 0;
@@ -276,7 +279,7 @@
     function onMove(e) {
       if (!isDragging) return;
       const y = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-      velocity = (y - prevY) * 0.004;
+      velocity = (prevY - y) * 0.004;  // Vorzeichen umkehren für natürliche Richtung
       prevY = y;
       e.preventDefault?.();
     }
@@ -297,7 +300,7 @@
     canvas.addEventListener('touchcancel', onUp);
 
     // ────────────────────────────────────────────────
-    // Animation
+    // Animation – Min/Max-Rotationen anpassen für korrekte Kipp-Richtung
     // ────────────────────────────────────────────────
     let lastRot = pivotGroup.rotation.x;
     let kippDone = false;
