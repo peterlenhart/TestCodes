@@ -65,18 +65,17 @@
     // =========================
     // OPTIK-ONLY: WebP Holzfläche laden
     // =========================
-    const WOOD_SRC = 'wuerfelflaeche.webp'; // <-- Pfad/Name hier anpassen, falls nötig
+    const WOOD_SRC = 'wuerfelflaeche.webp'; 
     const woodImg = new Image();
-    woodImg.crossOrigin = 'anonymous'; // schadet nicht; lokal egal, remote hilfreich
+    woodImg.crossOrigin = 'anonymous'; 
     let woodReady = false;
 
-    // Diese beiden Variablen brauchen wir für das einmalige Redraw nach dem Laden:
+    // Variablen für das Redraw
     let materialsRef = null;
     let faceNumbersRef = null;
 
     woodImg.onload = () => {
       woodReady = true;
-      // Wenn Materials schon existieren: Texturen einmalig neu bauen (nur optisch)
       if (materialsRef && faceNumbersRef) {
         for (let i = 0; i < materialsRef.length; i++) {
           const mat = materialsRef[i];
@@ -90,25 +89,19 @@
     };
     woodImg.onerror = () => {
       console.warn('⚠️ Holz-WebP konnte nicht geladen werden:', WOOD_SRC);
-      console.warn('   → Datei-Pfad/Name prüfen. Fallback-Holz (Gradient) bleibt aktiv.');
     };
     woodImg.src = WOOD_SRC;
 
     // =========================
     // Scene Setup
     // =========================
-    // KOORDINATENSYSTEM:
-    // Spalten: A(0-45px), B(45-90px), C(90-135px), D(135-180px), E(180-225px), F(225-270px), G(270-315px), H(315-360px)
-    // Zeilen: 1(0-45px), 2(45-90px), 3(90-135px), 4(135-180px), 5(180-225px), 6(225-270px), 7(270-315px), ...
-    // Würfel-Nullpunkt (x=0, z=0): Zwischen D/E (180px), zwischen Zeile 6/7 (270px)
-    
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x3f1a14); // Mahagoni schwarz-rot-braun
+    scene.background = new THREE.Color(0x3f1a14); 
 
-    const containerWidth = 360;  // Feste Breite
-    const containerHeight = 720; // FESTE Höhe (Design-Resolution!)
+    const containerWidth = 360; 
+    const containerHeight = 720; 
     
-    const aspect = containerWidth / containerHeight; // 0.5
+    const aspect = containerWidth / containerHeight; 
     const frustumSize = 2.5;
     const camera = new THREE.OrthographicCamera(
       frustumSize * aspect / -2,
@@ -118,11 +111,12 @@
       0.1,
       1000
     );
+    // Kamera schaut von oben (Y) herab
     camera.position.set(0, 11, 0);
     camera.lookAt(0, 0, 0);
     
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(360, 720); // FESTE 720px!
+    renderer.setSize(360, 720); 
     renderer.setPixelRatio(window.devicePixelRatio);
     document.getElementById('container').appendChild(renderer.domElement);
 
@@ -134,7 +128,7 @@
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
 
-    // Create random deck of 1-12 (no duplicates)
+    // Random Deck
     function createUniqueRandomDeck() {
       const deck = [];
       for (let i = 1; i <= 12; i++) deck.push(i);
@@ -148,8 +142,7 @@
     const randomDeck = createUniqueRandomDeck();
 
     // =========================
-    // OPTIK-ONLY: createFaceTexture nutzt WebP als Hintergrund, sonst Fallback
-    // (LOGIK bleibt unangetastet)
+    // Texture Logic
     // =========================
     function createFaceTexture(numbers, faceIndex) {
       const canvas = document.createElement('canvas');
@@ -157,10 +150,7 @@
       canvas.height = 426;
       const ctx = canvas.getContext('2d');
 
-      // --- Hintergrund ---
       if (woodReady) {
-        // WebP als Würfelfläche (skaliert auf 426x426)
-        // Für F5: 90° im Uhrzeigersinn drehen
         if (faceIndex === 5) {
           ctx.save();
           ctx.translate(426, 0);
@@ -171,7 +161,6 @@
           ctx.drawImage(woodImg, 0, 0, 426, 426);
         }
       } else {
-        // Fallback: dein bisheriger Holzgradient (bleibt bis WebP da ist)
         const gradient = ctx.createLinearGradient(0, 0, 426, 426);
         gradient.addColorStop(0, '#d7c2a4');
         gradient.addColorStop(0.5, '#c9b08f');
@@ -189,24 +178,19 @@
         }
       }
 
-      // Debug Face Index
       ctx.fillStyle = 'red';
       ctx.font = 'bold 40px system-ui';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillText(`F${faceIndex}`, 10, 10);
 
-      // Draw 3x3 grid
       ctx.strokeStyle = 'rgba(122, 74, 52, 0.4)';
       ctx.lineWidth = 4;
-
       ctx.beginPath(); ctx.moveTo(141, 27); ctx.lineTo(141, 399); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(285, 27); ctx.lineTo(285, 399); ctx.stroke();
-
       ctx.beginPath(); ctx.moveTo(27, 141); ctx.lineTo(399, 141); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(27, 285); ctx.lineTo(399, 285); ctx.stroke();
 
-      // Draw numbers in 3x3 grid
       ctx.fillStyle = '#2a160c';
       ctx.font = 'bold 80px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
@@ -233,7 +217,6 @@
       return texture;
     }
 
-    // Slot-IDs tracking (ändern sich nach jedem Kipp) – dein Original
     let currentSlots = {
       face5: { S1: randomDeck[2], S2: randomDeck[3], S3: randomDeck[1], S4: randomDeck[0] },
       face2: { S1: randomDeck[6], S2: randomDeck[7], S3: randomDeck[5], S4: randomDeck[4] }
@@ -250,7 +233,6 @@
       console.log('Slots nach Kipp:', currentSlots);
     }
 
-    // Face 5 und Face 2: Slots in korrekter Position (dein Original)
     const face5_base = [randomDeck[0],'X','X',randomDeck[1],'X','X','X',randomDeck[2],randomDeck[3]];
     const face5_rotated = [face5_base[8],face5_base[7],face5_base[6],face5_base[5],face5_base[4],face5_base[3],face5_base[2],face5_base[1],face5_base[0]];
 
@@ -266,9 +248,6 @@
       face5_rotated
     ];
 
-    console.log('Start Slots:', currentSlots);
-
-    // Create materials for each face (dein Original)
     const materials = faceNumbers.map((numbers, index) =>
       new THREE.MeshStandardMaterial({
         map: createFaceTexture(numbers, index),
@@ -277,37 +256,40 @@
       })
     );
 
-    // Referenzen für das einmalige Redraw nach WebP-Load
     materialsRef = materials;
     faceNumbersRef = faceNumbers;
 
-    // Create cube
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const cube = new THREE.Mesh(geometry, materials);
 
-    // Create pivot group
     const pivotGroup = new THREE.Group();
     scene.add(pivotGroup);
 
-    // ACHSMITTELPUNKT (x=0, z=0): Zwischen Spalte D/E (180px), zwischen Zeile 6/7 (270px)
-    // Nord-Ost-Ecke des Würfels liegt EXAKT auf diesem Achsmittelpunkt
-    // Berechnung: 270px / 720px × 2.5 Einheiten = 0.9375 von oben
-    //             Top (+1.25) - 0.9375 = 0.3125
-    pivotGroup.position.x = 0;      // Zwischen Spalte D und E (180px horizontal)
-    pivotGroup.position.z = 0.3125; // Zwischen Zeile 6 und 7 (270px vertikal)
+    // ==========================================
+    // NEUE POSITIONIERUNG (Spielstart-Setup)
+    // ==========================================
+    
+    // Achsmittelpunkt bleibt im Grid-Schnittpunkt (180px, 270px)
+    pivotGroup.position.x = 0;      
+    pivotGroup.position.z = 0.3125; 
 
-    const edgeOffset = Math.sqrt(2) / 2;
+    // Würfel so verschieben, dass:
+    // 1. F3 (Unten) am Boden liegt (y=0) -> Verschiebung um +0.5 in Y
+    // 2. Südliche Kante (z=+0.5) auf der X-Achse liegt -> Verschiebung um -0.5 in Z
+    // 3. Östliche Kante (x=+0.5) auf der Z-Achse liegt -> Verschiebung um -0.5 in X
+    cube.position.set(-0.5, 0.5, -0.5);
 
-    cube.position.x = -edgeOffset;
-    cube.position.y = edgeOffset;
-    cube.position.z = edgeOffset;
-
-    cube.rotation.x = Math.PI / 4;
+    // Keine initiale Rotation, damit F3 flach am Boden liegt
+    cube.rotation.set(0, 0, 0); 
+    
     pivotGroup.add(cube);
 
-    pivotGroup.rotation.x = Math.PI / 4;
+    // Auch die Pivot-Gruppe startet flach (0 Grad)
+    pivotGroup.rotation.x = 0;
 
-    // Manual rotation controls (only vertical movement)
+    // ==========================================
+
+    // Controls
     let isDragging = false;
     let previousMouseY = 0;
     let rotationVelocity = 0;
@@ -328,24 +310,17 @@
     function onMouseUp() { isDragging = false; }
 
     function onTouchStart(e) {
-      if (e.touches.length === 1) {
-        onMouseDown(e);
-      }
+      if (e.touches.length === 1) onMouseDown(e);
     }
 
     function onTouchMove(e) {
-      if (e.touches.length === 1) {
-        onMouseMove(e);
-      }
+      if (e.touches.length === 1) onMouseMove(e);
     }
 
     function onTouchEnd(e) {
-      if (e.touches.length === 0) {
-        isDragging = false;
-      }
+      if (e.touches.length === 0) isDragging = false;
     }
 
-    // Event listeners
     renderer.domElement.addEventListener('mousedown', onMouseDown);
     renderer.domElement.addEventListener('mousemove', onMouseMove);
     renderer.domElement.addEventListener('mouseup', onMouseUp);
@@ -355,7 +330,7 @@
     renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
     renderer.domElement.addEventListener('touchend', onTouchEnd);
 
-    // Animation loop (dein Original)
+    // Animation loop
     let lastRotation = pivotGroup.rotation.x;
     let kippComplete = false;
 
@@ -364,6 +339,9 @@
 
       pivotGroup.rotation.x += rotationVelocity;
 
+      // HINWEIS: Limits beibehalten (-45 bis +45 Grad). 
+      // Da der Startpunkt jetzt 0 ist, kippt der Würfel bei negativen Werten 
+      // optisch "in den Boden", aber die Logik bleibt intakt wie angefordert.
       const minRotation = -Math.PI / 4;
       const maxRotation = Math.PI / 4;
 
@@ -389,7 +367,6 @@
       }
 
       lastRotation = pivotGroup.rotation.x;
-
       rotationVelocity *= 0.95;
 
       renderer.render(scene, camera);
@@ -398,65 +375,50 @@
     animate();
 
     // =========================
-    // Grid Overlay Setup
+    // Grid Overlay
     // =========================
     const gridOverlay = document.getElementById('grid-overlay');
-    const gridSize = 45; // 360px ÷ 8 = 45px
-    const gridHeight = 720; // FESTE Höhe (wie Canvas!)
+    const gridSize = 45; 
+    const gridHeight = 720; 
     
     gridOverlay.setAttribute('viewBox', `0 0 360 ${gridHeight}`);
     gridOverlay.setAttribute('width', '360');
     gridOverlay.setAttribute('height', gridHeight);
     
-    // Vertikale Linien (8 Spalten)
     for (let i = 0; i <= 8; i++) {
       const x = i * gridSize;
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', x);
-      line.setAttribute('y1', 0);
-      line.setAttribute('x2', x);
-      line.setAttribute('y2', gridHeight);
+      line.setAttribute('x1', x); line.setAttribute('y1', 0);
+      line.setAttribute('x2', x); line.setAttribute('y2', gridHeight);
       gridOverlay.appendChild(line);
     }
     
-    // Horizontale Linien (alle 45px bis 720px)
-    const rows = Math.ceil(gridHeight / gridSize); // 16 Zeilen
+    const rows = Math.ceil(gridHeight / gridSize); 
     for (let i = 0; i <= rows; i++) {
       const y = i * gridSize;
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', 0);
-      line.setAttribute('y1', y);
-      line.setAttribute('x2', 360);
-      line.setAttribute('y2', y);
+      line.setAttribute('x1', 0); line.setAttribute('y1', y);
+      line.setAttribute('x2', 360); line.setAttribute('y2', y);
       gridOverlay.appendChild(line);
     }
     
-    // ACHSEN einzeichnen (hellweiß)
-    // X-Achse: horizontal durch Achsmittelpunkt (Zeile 6/7 = 270px)
     const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    xAxis.setAttribute('x1', 0);
-    xAxis.setAttribute('y1', 270);
-    xAxis.setAttribute('x2', 360);
-    xAxis.setAttribute('y2', 270);
+    xAxis.setAttribute('x1', 0); xAxis.setAttribute('y1', 270);
+    xAxis.setAttribute('x2', 360); xAxis.setAttribute('y2', 270);
     xAxis.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
     xAxis.setAttribute('stroke-width', '2');
     gridOverlay.appendChild(xAxis);
     
-    // Z-Achse: vertikal durch Achsmittelpunkt (Spalte D/E = 180px)
     const zAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    zAxis.setAttribute('x1', 180);
-    zAxis.setAttribute('y1', 0);
-    zAxis.setAttribute('x2', 180);
-    zAxis.setAttribute('y2', 720);
+    zAxis.setAttribute('x1', 180); zAxis.setAttribute('y1', 0);
+    zAxis.setAttribute('x2', 180); zAxis.setAttribute('y2', 720);
     zAxis.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
     zAxis.setAttribute('stroke-width', '2');
     gridOverlay.appendChild(zAxis);
     
-    // Toggle-Funktion: G-Taste drücken
     document.addEventListener('keydown', (e) => {
       if (e.key === 'g' || e.key === 'G') {
         gridOverlay.classList.toggle('hidden');
-        console.log('Grid toggled:', !gridOverlay.classList.contains('hidden'));
       }
     });
   </script>
