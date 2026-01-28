@@ -70,7 +70,6 @@
     woodImg.crossOrigin = 'anonymous'; 
     let woodReady = false;
 
-    // Variablen für das Redraw
     let materialsRef = null;
     let faceNumbersRef = null;
 
@@ -111,7 +110,6 @@
       0.1,
       1000
     );
-    // Kamera schaut von oben (Y) herab
     camera.position.set(0, 11, 0);
     camera.lookAt(0, 0, 0);
     
@@ -120,7 +118,6 @@
     renderer.setPixelRatio(window.devicePixelRatio);
     document.getElementById('container').appendChild(renderer.domElement);
 
-    // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
@@ -128,7 +125,6 @@
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
 
-    // Random Deck
     function createUniqueRandomDeck() {
       const deck = [];
       for (let i = 1; i <= 12; i++) deck.push(i);
@@ -141,9 +137,6 @@
 
     const randomDeck = createUniqueRandomDeck();
 
-    // =========================
-    // Texture Logic
-    // =========================
     function createFaceTexture(numbers, faceIndex) {
       const canvas = document.createElement('canvas');
       canvas.width = 426;
@@ -266,26 +259,32 @@
     scene.add(pivotGroup);
 
     // ==========================================
-    // NEUE POSITIONIERUNG (Spielstart-Setup)
+    // POSITIONIERUNG & LOGIK (Restored & Adjusted)
     // ==========================================
-    
-    // Achsmittelpunkt bleibt im Grid-Schnittpunkt (180px, 270px)
-    pivotGroup.position.x = 0;      
-    pivotGroup.position.z = 0.3125; 
 
-    // Würfel so verschieben, dass:
-    // 1. F3 (Unten) am Boden liegt (y=0) -> Verschiebung um +0.5 in Y
-    // 2. Südliche Kante (z=+0.5) auf der X-Achse liegt -> Verschiebung um -0.5 in Z
-    // 3. Östliche Kante (x=+0.5) auf der Z-Achse liegt -> Verschiebung um -0.5 in X
-    cube.position.set(-0.5, 0.5, -0.5);
+    const edgeOffset = Math.sqrt(2) / 2; // Originaler Offset-Wert (ca. 0.707)
 
-    // Keine initiale Rotation, damit F3 flach am Boden liegt
-    cube.rotation.set(0, 0, 0); 
+    // Interne Positionierung wie im Original (Kipp-Physik bleibt erhalten)
+    cube.position.x = -edgeOffset;
+    cube.position.y = edgeOffset;
+    cube.position.z = edgeOffset;
+    cube.rotation.x = Math.PI / 4; 
     
     pivotGroup.add(cube);
 
-    // Auch die Pivot-Gruppe startet flach (0 Grad)
-    pivotGroup.rotation.x = 0;
+    // START-ZUSTAND: "Anschlag" bei -45 Grad. 
+    // Dadurch liegt F3 flach am Boden (visuell 0 Grad Rotation des Würfels).
+    pivotGroup.rotation.x = -Math.PI / 4;
+
+    // PIVOT-POSITIONIERUNG (Kalkuliert für Kanten auf Achsen)
+    // Ziel: Östliche Kante auf x=0 (Z-Achse), Südliche Kante auf z=0.3125 (X-Achse).
+    // Original Pivot war (0, 0, 0.3125). 
+    // Wir verschieben den Pivot so, dass die Kantenlinien des Würfels die Achsen berühren.
+    // X: edgeOffset (0.707) - 0.5 = 0.207106
+    // Z: 0.3125 (Achse) - 0.5 = -0.1875
+    
+    pivotGroup.position.x = 0.207106; 
+    pivotGroup.position.z = -0.1875; 
 
     // ==========================================
 
@@ -330,7 +329,7 @@
     renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
     renderer.domElement.addEventListener('touchend', onTouchEnd);
 
-    // Animation loop
+    // Animation loop (Original-Logik)
     let lastRotation = pivotGroup.rotation.x;
     let kippComplete = false;
 
@@ -339,9 +338,6 @@
 
       pivotGroup.rotation.x += rotationVelocity;
 
-      // HINWEIS: Limits beibehalten (-45 bis +45 Grad). 
-      // Da der Startpunkt jetzt 0 ist, kippt der Würfel bei negativen Werten 
-      // optisch "in den Boden", aber die Logik bleibt intakt wie angefordert.
       const minRotation = -Math.PI / 4;
       const maxRotation = Math.PI / 4;
 
@@ -367,6 +363,7 @@
       }
 
       lastRotation = pivotGroup.rotation.x;
+
       rotationVelocity *= 0.95;
 
       renderer.render(scene, camera);
