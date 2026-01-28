@@ -290,22 +290,29 @@
     scene.add(pivotGroup);
 
     // ACHSMITTELPUNKT (x=0, z=0): Zwischen Spalte D/E (180px), zwischen Zeile 6/7 (270px)
-    // Nord-Ost-Ecke des Würfels liegt EXAKT auf diesem Achsmittelpunkt
-    // Berechnung: 270px / 720px × 2.5 Einheiten = 0.9375 von oben
-    //             Top (+1.25) - 0.9375 = 0.3125
+    // Würfel liegt flach mit F3 am Boden
+    // F3 Südkante auf X-Achse, F3 Ostkante auf Z-Achse
     pivotGroup.position.x = 0;      // Zwischen Spalte D und E (180px horizontal)
     pivotGroup.position.z = 0.3125; // Zwischen Zeile 6 und 7 (270px vertikal)
 
-    const edgeOffset = Math.sqrt(2) / 2;
+    // Würfel wird zentriert im pivotGroup platziert
+    // F3 liegt am Boden (keine Rotation nötig, da F3 standardmäßig -Y ist)
+    cube.position.x = 0;
+    cube.position.y = 0.5;  // Halbe Würfelhöhe nach oben, damit F3 auf y=0 liegt
+    cube.position.z = 0;
 
-    cube.position.x = -edgeOffset;
-    cube.position.y = edgeOffset;
-    cube.position.z = edgeOffset;
+    // Keine Rotation nötig - F3 (Bottom Face) liegt standardmäßig unten
+    // Südkante zeigt in +Z-Richtung, Ostkante in +X-Richtung
+    cube.rotation.x = 0;
+    cube.rotation.y = 0;
+    cube.rotation.z = 0;
 
-    cube.rotation.x = Math.PI / 4;
     pivotGroup.add(cube);
 
-    pivotGroup.rotation.x = Math.PI / 4;
+    // Keine initiale Rotation der pivotGroup
+    pivotGroup.rotation.x = 0;
+    pivotGroup.rotation.y = 0;
+    pivotGroup.rotation.z = 0;
 
     // Manual rotation controls (only vertical movement)
     let isDragging = false;
