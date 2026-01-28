@@ -65,16 +65,18 @@
     // =========================
     // OPTIK-ONLY: WebP Holzfläche laden
     // =========================
-    const WOOD_SRC = 'wuerfelflaeche.webp'; 
+    const WOOD_SRC = 'wuerfelflaeche.webp'; // <-- Pfad/Name hier anpassen, falls nötig
     const woodImg = new Image();
-    woodImg.crossOrigin = 'anonymous'; 
+    woodImg.crossOrigin = 'anonymous'; // schadet nicht; lokal egal, remote hilfreich
     let woodReady = false;
 
+    // Diese beiden Variablen brauchen wir für das einmalige Redraw nach dem Laden:
     let materialsRef = null;
     let faceNumbersRef = null;
 
     woodImg.onload = () => {
       woodReady = true;
+      // Wenn Materials schon existieren: Texturen einmalig neu bauen (nur optisch)
       if (materialsRef && faceNumbersRef) {
         for (let i = 0; i < materialsRef.length; i++) {
           const mat = materialsRef[i];
@@ -88,19 +90,25 @@
     };
     woodImg.onerror = () => {
       console.warn('⚠️ Holz-WebP konnte nicht geladen werden:', WOOD_SRC);
+      console.warn('   → Datei-Pfad/Name prüfen. Fallback-Holz (Gradient) bleibt aktiv.');
     };
     woodImg.src = WOOD_SRC;
 
     // =========================
     // Scene Setup
     // =========================
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x3f1a14); 
-
-    const containerWidth = 360; 
-    const containerHeight = 720; 
+    // KOORDINATENSYSTEM:
+    // Spalten: A(0-45px), B(45-90px), C(90-135px), D(135-180px), E(180-225px), F(225-270px), G(270-315px), H(315-360px)
+    // Zeilen: 1(0-45px), 2(45-90px), 3(90-135px), 4(135-180px), 5(180-225px), 6(225-270px), 7(270-315px), ...
+    // Würfel-Nullpunkt (x=0, z=0): Zwischen D/E (180px), zwischen Zeile 6/7 (270px)
     
-    const aspect = containerWidth / containerHeight; 
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x3f1a14); // Mahagoni schwarz-rot-braun
+
+    const containerWidth = 360;  // Feste Breite
+    const containerHeight = 720; // FESTE Höhe (Design-Resolution!)
+    
+    const aspect = containerWidth / containerHeight; // 0.5
     const frustumSize = 2.5;
     const camera = new THREE.OrthographicCamera(
       frustumSize * aspect / -2,
@@ -114,10 +122,11 @@
     camera.lookAt(0, 0, 0);
     
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(360, 720); 
+    renderer.setSize(360, 720); // FESTE 720px!
     renderer.setPixelRatio(window.devicePixelRatio);
     document.getElementById('container').appendChild(renderer.domElement);
 
+    // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
@@ -125,6 +134,7 @@
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
 
+    // Create random deck of 1-12 (no duplicates)
     function createUniqueRandomDeck() {
       const deck = [];
       for (let i = 1; i <= 12; i++) deck.push(i);
@@ -137,13 +147,20 @@
 
     const randomDeck = createUniqueRandomDeck();
 
+    // =========================
+    // OPTIK-ONLY: createFaceTexture nutzt WebP als Hintergrund, sonst Fallback
+    // (LOGIK bleibt unangetastet)
+    // =========================
     function createFaceTexture(numbers, faceIndex) {
       const canvas = document.createElement('canvas');
       canvas.width = 426;
       canvas.height = 426;
       const ctx = canvas.getContext('2d');
 
+      // --- Hintergrund ---
       if (woodReady) {
+        // WebP als Würfelfläche (skaliert auf 426x426)
+        // Für F5: 90° im Uhrzeigersinn drehen
         if (faceIndex === 5) {
           ctx.save();
           ctx.translate(426, 0);
@@ -154,6 +171,7 @@
           ctx.drawImage(woodImg, 0, 0, 426, 426);
         }
       } else {
+        // Fallback: dein bisheriger Holzgradient (bleibt bis WebP da ist)
         const gradient = ctx.createLinearGradient(0, 0, 426, 426);
         gradient.addColorStop(0, '#d7c2a4');
         gradient.addColorStop(0.5, '#c9b08f');
@@ -171,19 +189,24 @@
         }
       }
 
+      // Debug Face Index
       ctx.fillStyle = 'red';
       ctx.font = 'bold 40px system-ui';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillText(`F${faceIndex}`, 10, 10);
 
+      // Draw 3x3 grid
       ctx.strokeStyle = 'rgba(122, 74, 52, 0.4)';
       ctx.lineWidth = 4;
+
       ctx.beginPath(); ctx.moveTo(141, 27); ctx.lineTo(141, 399); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(285, 27); ctx.lineTo(285, 399); ctx.stroke();
+
       ctx.beginPath(); ctx.moveTo(27, 141); ctx.lineTo(399, 141); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(27, 285); ctx.lineTo(399, 285); ctx.stroke();
 
+      // Draw numbers in 3x3 grid
       ctx.fillStyle = '#2a160c';
       ctx.font = 'bold 80px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
@@ -210,6 +233,7 @@
       return texture;
     }
 
+    // Slot-IDs tracking (ändern sich nach jedem Kipp) – dein Original
     let currentSlots = {
       face5: { S1: randomDeck[2], S2: randomDeck[3], S3: randomDeck[1], S4: randomDeck[0] },
       face2: { S1: randomDeck[6], S2: randomDeck[7], S3: randomDeck[5], S4: randomDeck[4] }
@@ -226,6 +250,7 @@
       console.log('Slots nach Kipp:', currentSlots);
     }
 
+    // Face 5 und Face 2: Slots in korrekter Position (dein Original)
     const face5_base = [randomDeck[0],'X','X',randomDeck[1],'X','X','X',randomDeck[2],randomDeck[3]];
     const face5_rotated = [face5_base[8],face5_base[7],face5_base[6],face5_base[5],face5_base[4],face5_base[3],face5_base[2],face5_base[1],face5_base[0]];
 
@@ -241,6 +266,9 @@
       face5_rotated
     ];
 
+    console.log('Start Slots:', currentSlots);
+
+    // Create materials for each face (dein Original)
     const materials = faceNumbers.map((numbers, index) =>
       new THREE.MeshStandardMaterial({
         map: createFaceTexture(numbers, index),
@@ -249,7 +277,188 @@
       })
     );
 
+    // Referenzen für das einmalige Redraw nach WebP-Load
     materialsRef = materials;
     faceNumbersRef = faceNumbers;
 
-    const geometry = new THREE.BoxGeometry(
+    // Create cube
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const cube = new THREE.Mesh(geometry, materials);
+
+    // Create pivot group
+    const pivotGroup = new THREE.Group();
+    scene.add(pivotGroup);
+
+    // ACHSMITTELPUNKT (x=0, z=0): Zwischen Spalte D/E (180px), zwischen Zeile 6/7 (270px)
+    // Nord-Ost-Ecke des Würfels liegt EXAKT auf diesem Achsmittelpunkt
+    // Berechnung: 270px / 720px × 2.5 Einheiten = 0.9375 von oben
+    //             Top (+1.25) - 0.9375 = 0.3125
+    pivotGroup.position.x = 0;      // Zwischen Spalte D und E (180px horizontal)
+    pivotGroup.position.z = 0.3125; // Zwischen Zeile 6 und 7 (270px vertikal)
+
+    const edgeOffset = Math.sqrt(2) / 2;
+
+    cube.position.x = -edgeOffset;
+    cube.position.y = edgeOffset;
+    cube.position.z = edgeOffset;
+
+    cube.rotation.x = Math.PI / 4;
+    pivotGroup.add(cube);
+
+    pivotGroup.rotation.x = Math.PI / 4;
+
+    // Manual rotation controls (only vertical movement)
+    let isDragging = false;
+    let previousMouseY = 0;
+    let rotationVelocity = 0;
+
+    function onMouseDown(e) {
+      isDragging = true;
+      previousMouseY = e.clientY || e.touches[0].clientY;
+    }
+
+    function onMouseMove(e) {
+      if (!isDragging) return;
+      const currentY = e.clientY || e.touches[0].clientY;
+      const deltaY = currentY - previousMouseY;
+      rotationVelocity = deltaY * 0.005;
+      previousMouseY = currentY;
+    }
+
+    function onMouseUp() { isDragging = false; }
+
+    function onTouchStart(e) {
+      if (e.touches.length === 1) {
+        onMouseDown(e);
+      }
+    }
+
+    function onTouchMove(e) {
+      if (e.touches.length === 1) {
+        onMouseMove(e);
+      }
+    }
+
+    function onTouchEnd(e) {
+      if (e.touches.length === 0) {
+        isDragging = false;
+      }
+    }
+
+    // Event listeners
+    renderer.domElement.addEventListener('mousedown', onMouseDown);
+    renderer.domElement.addEventListener('mousemove', onMouseMove);
+    renderer.domElement.addEventListener('mouseup', onMouseUp);
+    renderer.domElement.addEventListener('mouseleave', onMouseUp);
+
+    renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+    renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+    renderer.domElement.addEventListener('touchend', onTouchEnd);
+
+    // Animation loop (dein Original)
+    let lastRotation = pivotGroup.rotation.x;
+    let kippComplete = false;
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      pivotGroup.rotation.x += rotationVelocity;
+
+      const minRotation = -Math.PI / 4;
+      const maxRotation = Math.PI / 4;
+
+      if (pivotGroup.rotation.x < minRotation) {
+        pivotGroup.rotation.x = minRotation;
+        rotationVelocity = 0;
+        if (!kippComplete && lastRotation > minRotation + 0.1) {
+          swapSlots();
+          kippComplete = true;
+        }
+      }
+      if (pivotGroup.rotation.x > maxRotation) {
+        pivotGroup.rotation.x = maxRotation;
+        rotationVelocity = 0;
+        if (!kippComplete && lastRotation < maxRotation - 0.1) {
+          swapSlots();
+          kippComplete = true;
+        }
+      }
+
+      if (Math.abs(rotationVelocity) > 0.01) {
+        kippComplete = false;
+      }
+
+      lastRotation = pivotGroup.rotation.x;
+
+      rotationVelocity *= 0.95;
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // =========================
+    // Grid Overlay Setup
+    // =========================
+    const gridOverlay = document.getElementById('grid-overlay');
+    const gridSize = 45; // 360px ÷ 8 = 45px
+    const gridHeight = 720; // FESTE Höhe (wie Canvas!)
+    
+    gridOverlay.setAttribute('viewBox', `0 0 360 ${gridHeight}`);
+    gridOverlay.setAttribute('width', '360');
+    gridOverlay.setAttribute('height', gridHeight);
+    
+    // Vertikale Linien (8 Spalten)
+    for (let i = 0; i <= 8; i++) {
+      const x = i * gridSize;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x);
+      line.setAttribute('y1', 0);
+      line.setAttribute('x2', x);
+      line.setAttribute('y2', gridHeight);
+      gridOverlay.appendChild(line);
+    }
+    
+    // Horizontale Linien (alle 45px bis 720px)
+    const rows = Math.ceil(gridHeight / gridSize); // 16 Zeilen
+    for (let i = 0; i <= rows; i++) {
+      const y = i * gridSize;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', 0);
+      line.setAttribute('y1', y);
+      line.setAttribute('x2', 360);
+      line.setAttribute('y2', y);
+      gridOverlay.appendChild(line);
+    }
+    
+    // ACHSEN einzeichnen (hellweiß)
+    // X-Achse: horizontal durch Achsmittelpunkt (Zeile 6/7 = 270px)
+    const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    xAxis.setAttribute('x1', 0);
+    xAxis.setAttribute('y1', 270);
+    xAxis.setAttribute('x2', 360);
+    xAxis.setAttribute('y2', 270);
+    xAxis.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
+    xAxis.setAttribute('stroke-width', '2');
+    gridOverlay.appendChild(xAxis);
+    
+    // Z-Achse: vertikal durch Achsmittelpunkt (Spalte D/E = 180px)
+    const zAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    zAxis.setAttribute('x1', 180);
+    zAxis.setAttribute('y1', 0);
+    zAxis.setAttribute('x2', 180);
+    zAxis.setAttribute('y2', 720);
+    zAxis.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
+    zAxis.setAttribute('stroke-width', '2');
+    gridOverlay.appendChild(zAxis);
+    
+    // Toggle-Funktion: G-Taste drücken
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'g' || e.key === 'G') {
+        gridOverlay.classList.toggle('hidden');
+        console.log('Grid toggled:', !gridOverlay.classList.contains('hidden'));
+      }
+    });
+  </script>
+</body>
+</html>
