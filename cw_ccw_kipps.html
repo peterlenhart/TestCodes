@@ -37,7 +37,8 @@
     #uiOverlay {
       position: absolute;
       top: 0;
-      left: 0;
+      left: 50%;
+      transform: translateX(-50%);
       width: 360px;
       height: 100vh;
       pointer-events: none;
@@ -46,58 +47,101 @@
 
     #hintText {
       position: absolute;
-      top: 450px; /* Zeile 11 (0-45-90...450) */
-      left: 0;
-      width: 360px;
+      top: 380px;
+      left: 180px;
+      transform: translateX(-50%);
       text-align: center;
       font-size: 24px;
       font-weight: bold;
-      color: #EADBBE;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 50%, #e0e0e0 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8),
+                   0 0 10px rgba(255,255,255,0.5);
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
       pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #countdown {
+      position: absolute;
+      top: 430px;
+      left: 180px;
+      transform: translateX(-50%);
+      font-size: 50px;
+      font-weight: bold;
+      background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 50%, #e0e0e0 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8),
+                   0 0 10px rgba(255,255,255,0.5);
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+      pointer-events: none;
+      display: none;
     }
 
     #actionButton {
       position: absolute;
-      top: 540px; /* Zeile 12/13 */
-      left: 50%;
+      top: 515px;
+      left: 180px;
       transform: translateX(-50%);
-      padding: 12px 32px;
-      background: #EADBBE;
-      border: none;
-      border-radius: 8px;
-      font-size: 20px;
+      padding: 8px 20px;
+      background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 50%, #e0e0e0 100%);
+      border: 1px solid #c0c0c0;
+      border-radius: 6px;
+      font-size: 16px;
       font-weight: bold;
       color: #2a1810;
       cursor: pointer;
       pointer-events: auto;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.4),
+                  inset 0 1px 0 rgba(255,255,255,0.8);
+      white-space: nowrap;
     }
 
     #actionButton:active {
       transform: translateX(-50%) scale(0.95);
+      background: linear-gradient(180deg, #f0f0f0 0%, #e0e0e0 50%, #d0d0d0 100%);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4),
+                  inset 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    #actionButton.pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(1.05); }
     }
 
     #backButton {
       position: absolute;
       top: 10px;
-      left: 10px;
-      width: 50px;
-      height: 50px;
-      background: #EADBBE;
-      border: none;
+      right: 10px;
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 50%, #e0e0e0 100%);
+      border: 1px solid #c0c0c0;
       border-radius: 50%;
-      font-size: 24px;
+      font-size: 20px;
       cursor: pointer;
       pointer-events: auto;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4),
+                  inset 0 1px 0 rgba(255,255,255,0.8);
       display: flex;
       align-items: center;
       justify-content: center;
+      z-index: 200;
     }
 
     #backButton:active {
       transform: scale(0.95);
+      background: linear-gradient(180deg, #f0f0f0 0%, #e0e0e0 50%, #d0d0d0 100%);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.4),
+                  inset 0 1px 2px rgba(0,0,0,0.2);
     }
 
     #handIcon {
@@ -130,8 +174,9 @@
   
   <div id="uiOverlay">
     <div id="handIcon">👆</div>
-    <div id="hintText">SCHAUEN & MERKEN</div>
-    <button id="actionButton">KIPPEN & MERKEN</button>
+    <div id="hintText">SYMBOLE MERKEN</div>
+    <div id="countdown">60</div>
+    <button id="actionButton">weiter</button>
     <button id="backButton">↻</button>
   </div>
 
@@ -141,7 +186,7 @@
     // Scene Setup
     // =========================
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x3f1a14); // Mahagoni schwarz-rot-braun
+    scene.background = new THREE.Color(0x1c1c1e); // Anthrazit grau-schwarz
 
     const containerWidth = 360;
     const containerHeight = 720;
@@ -493,30 +538,79 @@
     let gamePhase = 'schauen'; // 'schauen', 'kippen', 'spielen'
     let currentMode = 'eck'; // 'eck' oder 'kanten'
     let kippCount = 0; // Zählt die Kipps
+    let countdownTimer = null;
+    let countdownValue = 60;
     
     const hintText = document.getElementById('hintText');
+    const countdown = document.getElementById('countdown');
     const actionButton = document.getElementById('actionButton');
     const handIcon = document.getElementById('handIcon');
     const backButton = document.getElementById('backButton');
     
+    // Timer-Funktion
+    function startCountdown(onComplete) {
+      stopCountdown();
+      countdownValue = 60;
+      countdown.textContent = countdownValue;
+      countdown.style.display = 'block';
+      actionButton.style.display = 'block';
+      
+      countdownTimer = setInterval(() => {
+        countdownValue--;
+        countdown.textContent = countdownValue;
+        
+        if (countdownValue <= 0) {
+          stopCountdown();
+          if (onComplete) onComplete();
+        }
+      }, 1000);
+    }
+    
+    function stopCountdown() {
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      countdown.style.display = 'none';
+    }
+    
+    // Phase 1 starten
+    startCountdown(() => {
+      // Auto-Wechsel nach 60 Sek
+      if (gamePhase === 'schauen') {
+        phaseSchauenToKippen();
+      }
+    });
+    
+    function phaseSchauenToKippen() {
+      gamePhase = 'kippen';
+      currentMode = 'kanten';
+      
+      eckGroup.visible = false;
+      kipGroup.visible = true;
+      
+      hintText.textContent = 'KIPPE UND MERKE!';
+      
+      // Timer für Phase 2 starten
+      startCountdown(() => {
+        if (gamePhase === 'kippen') {
+          phaseKippenToSpielen();
+        }
+      });
+    }
+    
+    function phaseKippenToSpielen() {
+      gamePhase = 'spielen';
+      hintText.style.display = 'none';
+      actionButton.style.display = 'none';
+      stopCountdown();
+    }
+    
     actionButton.addEventListener('click', () => {
       if (gamePhase === 'schauen') {
-        // Phase 1 → 2: Wechsel zu Kanten-Kipp-Modus
-        gamePhase = 'kippen';
-        currentMode = 'kanten';
-        
-        eckGroup.visible = false;
-        kipGroup.visible = true;
-        
-        // Button bleibt "KIPPEN & MERKEN" bis 3 Kipps
-        
+        phaseSchauenToKippen();
       } else if (gamePhase === 'kippen') {
-        // Phase 2 → 3: Spiel startet
-        gamePhase = 'spielen';
-        
-        hintText.style.display = 'none';
-        actionButton.style.display = 'none';
-        backButton.style.display = 'none';
+        phaseKippenToSpielen();
       }
     });
 
@@ -529,10 +623,9 @@
       
       // UI anzeigen
       hintText.style.display = 'block';
-      hintText.textContent = 'SCHAUEN & MERKEN';
-      actionButton.style.display = 'block';
-      actionButton.textContent = 'KIPPEN & MERKEN';
-      backButton.style.display = 'flex';
+      hintText.textContent = 'SYMBOLE MERKEN';
+      actionButton.textContent = 'weiter';
+      actionButton.classList.remove('pulse');
       
       // Würfel wechseln
       eckGroup.visible = true;
@@ -542,6 +635,13 @@
       cube.position.set(-offset, offset, 0.109375 + offset);
       cube.rotation.set(0, 0, 0);
       currentQuadrant = 3;
+      
+      // Timer neu starten
+      startCountdown(() => {
+        if (gamePhase === 'schauen') {
+          phaseSchauenToKippen();
+        }
+      });
       
       console.log('Zurück zu Startposition');
     });
@@ -785,16 +885,6 @@
         currentQuadrant = newQ;
         console.log('Würfel jetzt in Q' + newQ);
         isAnimating = false;
-        
-        // Kipp-Zähler erhöhen
-        kippCount++;
-        console.log('Kipp #' + kippCount);
-        
-        // Nach 3 Kipps: Button wird "BEREIT?"
-        if (kippCount >= 3 && gamePhase === 'kippen') {
-          actionButton.textContent = 'BEREIT?';
-          console.log('Button → BEREIT?');
-        }
       }
       
       animate();
