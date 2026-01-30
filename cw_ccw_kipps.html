@@ -24,20 +24,116 @@
       left: 50%;
       transform: translateX(-50%);
       width: 360px;
-      height: 100vh;
+      height: 720px;
     }
 
     #container canvas {
       position: absolute;
       top: 0;
       left: 0;
-      width: 100% !important;
-      height: 100% !important;
+    }
+
+    /* UI OVERLAY */
+    #uiOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 360px;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    #hintText {
+      position: absolute;
+      top: 450px; /* Zeile 11 (0-45-90...450) */
+      left: 0;
+      width: 360px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #EADBBE;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      pointer-events: none;
+    }
+
+    #actionButton {
+      position: absolute;
+      top: 540px; /* Zeile 12/13 */
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 32px;
+      background: #EADBBE;
+      border: none;
+      border-radius: 8px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #2a1810;
+      cursor: pointer;
+      pointer-events: auto;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    #actionButton:active {
+      transform: translateX(-50%) scale(0.95);
+    }
+
+    #backButton {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 50px;
+      height: 50px;
+      background: #EADBBE;
+      border: none;
+      border-radius: 50%;
+      font-size: 24px;
+      cursor: pointer;
+      pointer-events: auto;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #backButton:active {
+      transform: scale(0.95);
+    }
+
+    #handIcon {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 60px;
+      font-size: 50px;
+      pointer-events: none;
+      top: 270px;
+      display: none; /* Unsichtbar */
+    }
+
+    /* Animation auskommentiert */
+    /*
+    @keyframes handBounce {
+      0%, 100% { top: 270px; }
+      50% { top: 315px; }
+    }
+    */
+
+    .hidden {
+      display: none !important;
     }
   </style>
 </head>
 <body>
   <div id="container"></div>
+  
+  <div id="uiOverlay">
+    <div id="handIcon">👆</div>
+    <div id="hintText">SCHAUEN & MERKEN</div>
+    <button id="actionButton">KIPPEN & MERKEN</button>
+    <button id="backButton">↻</button>
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
@@ -272,6 +368,88 @@
       roughness: 0.7
     });
     
+    // =========================
+    // MODUS 1: ECKSTAND-WÜRFEL
+    // =========================
+    const eckGroup = new THREE.Group();
+    scene.add(eckGroup);
+    
+    const eckPivot = new THREE.Group();
+    eckPivot.position.set(0, 0, 0); // Pivot am Ursprung
+    eckPivot.rotation.x = 13 * Math.PI / 180; // 13° nach vorne geneigt
+    eckGroup.add(eckPivot);
+    
+    const eckCube = new THREE.Mesh(cubeGeometry, cubeMaterial.clone());
+    const offset = cubeSize / 2;
+    const centerHeight = cubeSize * Math.sqrt(3) / 2;
+    eckCube.position.set(0, centerHeight, 0);
+    eckCube.rotation.set(Math.atan(Math.sqrt(2)), Math.PI / 4, 0);
+    eckCube.castShadow = true;
+    eckCube.receiveShadow = true;
+    eckPivot.add(eckCube);
+    
+    // 3×3 Grid-Linien auf Eckstand-Würfel
+    const gridLineMaterial = new THREE.LineBasicMaterial({ 
+      color: 0x000000, 
+      linewidth: 2,
+      transparent: true,
+      opacity: 0.4
+    });
+    
+    const third = cubeSize / 3;
+    const half = cubeSize / 2;
+    
+    function createFaceGrid(normal, up) {
+      const gridGroup = new THREE.Group();
+      
+      for (let i = 1; i <= 2; i++) {
+        const y = -half + i * third;
+        const points = [
+          new THREE.Vector3(-half, y, 0),
+          new THREE.Vector3(half, y, 0)
+        ];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const line = new THREE.Line(geometry, gridLineMaterial);
+        gridGroup.add(line);
+      }
+      
+      for (let i = 1; i <= 2; i++) {
+        const x = -half + i * third;
+        const points = [
+          new THREE.Vector3(x, -half, 0),
+          new THREE.Vector3(x, half, 0)
+        ];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const line = new THREE.Line(geometry, gridLineMaterial);
+        gridGroup.add(line);
+      }
+      
+      gridGroup.lookAt(normal);
+      gridGroup.position.copy(normal.multiplyScalar(half + 0.001));
+      return gridGroup;
+    }
+    
+    const faces = [
+      { normal: new THREE.Vector3(0, 0, 1), up: new THREE.Vector3(0, 1, 0) },
+      { normal: new THREE.Vector3(0, 0, -1), up: new THREE.Vector3(0, 1, 0) },
+      { normal: new THREE.Vector3(1, 0, 0), up: new THREE.Vector3(0, 1, 0) },
+      { normal: new THREE.Vector3(-1, 0, 0), up: new THREE.Vector3(0, 1, 0) },
+      { normal: new THREE.Vector3(0, 1, 0), up: new THREE.Vector3(0, 0, -1) },
+      { normal: new THREE.Vector3(0, -1, 0), up: new THREE.Vector3(0, 0, 1) }
+    ];
+    
+    faces.forEach(face => {
+      const grid = createFaceGrid(face.normal.clone(), face.up);
+      eckCube.add(grid);
+    });
+    
+    // =========================
+    // MODUS 2: KANTEN-KIPP-WÜRFEL
+    // =========================
+    const kipGroup = new THREE.Group();
+    kipGroup.visible = false; // Startet versteckt
+    scene.add(kipGroup);
+    
     const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
     
     // Würfel-Konfiguration:
@@ -282,12 +460,11 @@
     // - Vertikale Kante: von (0,0,0.109375) nach (0,0.46875,0.109375)
     
     // Position: Mittelpunkt des Würfels
-    const offset = cubeSize / 2;
     cube.position.set(-offset, offset, 0.109375 + offset); // NEGATIVE X!
     
     cube.castShadow = true;
     cube.receiveShadow = true;
-    scene.add(cube);
+    kipGroup.add(cube);
 
     // =========================
     // OBERE OSTKANTE (grün markiert zur Kontrolle)
@@ -308,8 +485,101 @@
       0.46875,                    // Y = oben
       0.109375 + cubeSize / 2     // Z = Mitte der Ostkante
     );
-    scene.add(upperEastEdge);
+    kipGroup.add(upperEastEdge);
 
+    // =========================
+    // GAME STATE & MODE SWITCHING
+    // =========================
+    let gamePhase = 'schauen'; // 'schauen', 'kippen', 'spielen'
+    let currentMode = 'eck'; // 'eck' oder 'kanten'
+    let kippCount = 0; // Zählt die Kipps
+    
+    const hintText = document.getElementById('hintText');
+    const actionButton = document.getElementById('actionButton');
+    const handIcon = document.getElementById('handIcon');
+    const backButton = document.getElementById('backButton');
+    
+    actionButton.addEventListener('click', () => {
+      if (gamePhase === 'schauen') {
+        // Phase 1 → 2: Wechsel zu Kanten-Kipp-Modus
+        gamePhase = 'kippen';
+        currentMode = 'kanten';
+        
+        eckGroup.visible = false;
+        kipGroup.visible = true;
+        
+        // Button bleibt "KIPPEN & MERKEN" bis 3 Kipps
+        
+      } else if (gamePhase === 'kippen') {
+        // Phase 2 → 3: Spiel startet
+        gamePhase = 'spielen';
+        
+        hintText.style.display = 'none';
+        actionButton.style.display = 'none';
+        backButton.style.display = 'none';
+      }
+    });
+
+    // ZURÜCK-BUTTON: Reset zu Startposition
+    backButton.addEventListener('click', () => {
+      // Reset zu Phase 1
+      gamePhase = 'schauen';
+      currentMode = 'eck';
+      kippCount = 0;
+      
+      // UI anzeigen
+      hintText.style.display = 'block';
+      hintText.textContent = 'SCHAUEN & MERKEN';
+      actionButton.style.display = 'block';
+      actionButton.textContent = 'KIPPEN & MERKEN';
+      backButton.style.display = 'flex';
+      
+      // Würfel wechseln
+      eckGroup.visible = true;
+      kipGroup.visible = false;
+      
+      // Würfel-Position zurücksetzen
+      cube.position.set(-offset, offset, 0.109375 + offset);
+      cube.rotation.set(0, 0, 0);
+      currentQuadrant = 3;
+      
+      console.log('Zurück zu Startposition');
+    });
+
+    // =========================
+    // ECKSTAND-STEUERUNG (DEAKTIVIERT)
+    // =========================
+    /* BEWEGUNG DEAKTIVIERT
+    let isTouchingEck = false;
+    let touchStartYEck = 0;
+    let currentTiltEck = 0;
+    const maxTiltEck = 40 * Math.PI / 180;
+    const tiltSensitivityEck = 0.003;
+    
+    renderer.domElement.addEventListener('touchstart', (e) => {
+      if (currentMode !== 'eck' || gamePhase !== 'schauen') return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      touchStartYEck = touch.clientY;
+      isTouchingEck = true;
+    });
+    
+    renderer.domElement.addEventListener('touchmove', (e) => {
+      if (!isTouchingEck || currentMode !== 'eck') return;
+      e.preventDefault();
+      
+      const touch = e.touches[0];
+      const deltaY = touch.clientY - touchStartYEck;
+      
+      const tiltChange = deltaY * tiltSensitivityEck;
+      currentTiltEck = Math.max(0, Math.min(maxTiltEck, currentTiltEck + tiltChange));
+      
+      eckPivot.rotation.x = currentTiltEck;
+      
+      touchStartYEck = touch.clientY;
+    });
+    */
+    
     // =========================
     // WÜRFEL-KIPPMECHANIK - Zwei Richtungen
     // =========================
@@ -320,21 +590,25 @@
     let currentQuadrant = 3; // Start in Q3
     
     renderer.domElement.addEventListener('touchstart', (e) => {
-      if (isAnimating) return;
-      e.preventDefault();
-      const touch = e.touches[0];
-      swipeStartX = touch.clientX;
-      swipeStartY = touch.clientY;
-      isSwiping = true;
+      if (currentMode === 'kanten' && gamePhase === 'kippen') {
+        // Kanten-Kipp-Modus
+        if (isAnimating) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        swipeStartX = touch.clientX;
+        swipeStartY = touch.clientY;
+        isSwiping = true;
+      }
     });
     
     renderer.domElement.addEventListener('touchmove', (e) => {
-      if (!isSwiping || isAnimating) return;
-      e.preventDefault();
-      
-      const touch = e.touches[0];
-      const deltaX = touch.clientX - swipeStartX;
-      const deltaY = touch.clientY - swipeStartY;
+      if (currentMode === 'kanten' && isSwiping && !isAnimating && gamePhase === 'kippen') {
+        // Kanten-Kipp-Bewegung
+        e.preventDefault();
+        
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - swipeStartX;
+        const deltaY = touch.clientY - swipeStartY;
       
       // Q3 ↔ Q0: Wisch vertikal (-Z / +Z)
       if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 30) {
@@ -376,9 +650,10 @@
           performKipp('east_from_q3');
         }
       }
+      }
     });
     
-    renderer.domElement.addEventListener('touchend', (e) => {
+    renderer.domElement.addEventListener('touchend', () => {
       isSwiping = false;
     });
     
@@ -457,10 +732,14 @@
       
       const pivotGroup = new THREE.Group();
       pivotGroup.position.copy(pivotPoint);
-      scene.add(pivotGroup);
+      kipGroup.add(pivotGroup);
       
-      const cubeWorldPos = cube.position.clone();
-      scene.remove(cube);
+      // Hole Welt-Position des Würfels
+      cube.updateMatrixWorld();
+      const cubeWorldPos = new THREE.Vector3();
+      cube.getWorldPosition(cubeWorldPos);
+      
+      kipGroup.remove(cube);
       
       const relativePos = cubeWorldPos.clone().sub(pivotPoint);
       cube.position.copy(relativePos);
@@ -496,15 +775,26 @@
         cube.getWorldPosition(newWorldPos);
         
         pivotGroup.remove(cube);
-        scene.remove(pivotGroup);
+        kipGroup.remove(pivotGroup);
         
+        // Position relativ zu kipGroup (kipGroup ist bei 0,0,0)
         cube.position.copy(newWorldPos);
         cube.rotation.set(0, 0, 0);
-        scene.add(cube);
+        kipGroup.add(cube);
         
         currentQuadrant = newQ;
         console.log('Würfel jetzt in Q' + newQ);
         isAnimating = false;
+        
+        // Kipp-Zähler erhöhen
+        kippCount++;
+        console.log('Kipp #' + kippCount);
+        
+        // Nach 3 Kipps: Button wird "BEREIT?"
+        if (kippCount >= 3 && gamePhase === 'kippen') {
+          actionButton.textContent = 'BEREIT?';
+          console.log('Button → BEREIT?');
+        }
       }
       
       animate();
