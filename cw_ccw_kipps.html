@@ -156,6 +156,14 @@
       display: none; /* Unsichtbar */
     }
 
+    /* Animation auskommentiert */
+    /*
+    @keyframes handBounce {
+      0%, 100% { top: 270px; }
+      50% { top: 315px; }
+    }
+    */
+
     .hidden {
       display: none !important;
     }
@@ -639,224 +647,344 @@
     });
 
     // =========================
-    // WÜRFEL-KIPPMECHANIK
+    // ECKSTAND-STEUERUNG (DEAKTIVIERT)
     // =========================
-    let currentQuadrant = 3;
-    let isDragging = false;
-    let dragStartX = 0;
-    let dragStartY = 0;
-    let pivotGroup = null;
-    let pivotAxis = '';
-    let pivotSign = 1;
-    let pivotTarget = Math.PI / 2;
-    let currentAngle = 0;
-    let angularVelocity = 0;
-    let isFalling = false;
-    let fallStartTime = 0;
-    let fromQuadrant = 3;
-    let toQuadrant = 3;
-
-    const sensitivity = 0.008;          // Höhere Sensitivität für schnelleres Ansprechen
-    const gravityTorque = 380;          // Stärkeres Drehmoment
-    const damping = 2.2;                // Leichte Dämpfung
-
-    function startPivot(direction) {
-      if (pivotGroup) return;
-
-      let pivotPos, axis, sign, target, fromQ, toQ;
-
-      if (direction === 'north' && currentQuadrant === 3) {
-        pivotPos = new THREE.Vector3(-0.234375, 0, 0.109375);
-        axis = 'x'; sign = -1; target = Math.PI / 2;
-        fromQ = 3; toQ = 0;
-      } else if (direction === 'south' && currentQuadrant === 0) {
-        pivotPos = new THREE.Vector3(-0.234375, 0, 0.109375);
-        axis = 'x'; sign = 1; target = Math.PI / 2;
-        fromQ = 0; toQ = 3;
-      } else if (direction === 'east' && currentQuadrant === 0) {
-        pivotPos = new THREE.Vector3(0, 0, 0.109375 + 0.234375);
-        axis = 'z'; sign = -1; target = Math.PI / 2;
-        fromQ = 0; toQ = 1;
-      } else if (direction === 'west' && currentQuadrant === 1) {
-        pivotPos = new THREE.Vector3(0, 0, 0.109375 + 0.234375);
-        axis = 'z'; sign = 1; target = Math.PI / 2;
-        fromQ = 1; toQ = 0;
-      } else if (direction === 'south_from_q1' && currentQuadrant === 1) {
-        pivotPos = new THREE.Vector3(0.234375, 0, 0.109375);
-        axis = 'x'; sign = 1; target = Math.PI / 2;
-        fromQ = 1; toQ = 2;
-      } else if (direction === 'north_from_q2' && currentQuadrant === 2) {
-        pivotPos = new THREE.Vector3(0.234375, 0, 0.109375);
-        axis = 'x'; sign = -1; target = Math.PI / 2;
-        fromQ = 2; toQ = 1;
-      } else if (direction === 'west_from_q2' && currentQuadrant === 2) {
-        pivotPos = new THREE.Vector3(0, 0, 0.109375 + 0.234375);
-        axis = 'z'; sign = 1; target = Math.PI / 2;
-        fromQ = 2; toQ = 3;
-      } else if (direction === 'east_from_q3' && currentQuadrant === 3) {
-        pivotPos = new THREE.Vector3(0, 0, 0.109375 + 0.234375);
-        axis = 'z'; sign = -1; target = Math.PI / 2;
-        fromQ = 3; toQ = 2;
-      } else {
-        return;
+    /* BEWEGUNG DEAKTIVIERT
+    let isTouchingEck = false;
+    let touchStartYEck = 0;
+    let currentTiltEck = 0;
+    const maxTiltEck = 40 * Math.PI / 180;
+    const tiltSensitivityEck = 0.003;
+    
+    renderer.domElement.addEventListener('touchstart', (e) => {
+      if (currentMode !== 'eck' || gamePhase !== 'schauen') return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      touchStartYEck = touch.clientY;
+      isTouchingEck = true;
+    });
+    
+    renderer.domElement.addEventListener('touchmove', (e) => {
+      if (!isTouchingEck || currentMode !== 'eck') return;
+      e.preventDefault();
+      
+      const touch = e.touches[0];
+      const deltaY = touch.clientY - touchStartYEck;
+      
+      const tiltChange = deltaY * tiltSensitivityEck;
+      currentTiltEck = Math.max(0, Math.min(maxTiltEck, currentTiltEck + tiltChange));
+      
+      eckPivot.rotation.x = currentTiltEck;
+      
+      touchStartYEck = touch.clientY;
+    });
+    */
+    
+    // =========================
+    // WÜRFEL-KIPPMECHANIK - Zwei Richtungen
+    // =========================
+    let isSwiping = false;
+    let swipeStartX = 0;
+    let swipeStartY = 0;
+    let isAnimating = false;
+    let currentQuadrant = 3; // Start in Q3
+    
+    renderer.domElement.addEventListener('touchstart', (e) => {
+      if (currentMode === 'kanten' && gamePhase === 'kippen') {
+        // Kanten-Kipp-Modus
+        if (isAnimating) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        swipeStartX = touch.clientX;
+        swipeStartY = touch.clientY;
+        isSwiping = true;
       }
-
-      pivotGroup = new THREE.Group();
-      pivotGroup.position.copy(pivotPos);
+    });
+    
+    renderer.domElement.addEventListener('touchmove', (e) => {
+      if (currentMode === 'kanten' && isSwiping && !isAnimating && gamePhase === 'kippen') {
+        // Kanten-Kipp-Bewegung
+        e.preventDefault();
+        
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - swipeStartX;
+        const deltaY = touch.clientY - swipeStartY;
+      
+      // Q3 ↔ Q0: Wisch vertikal (-Z / +Z)
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 30) {
+        if (deltaY < 0 && currentQuadrant === 3) {
+          // Wisch nach oben (-Z): Q3 → Q0
+          isSwiping = false;
+          performKipp('north');
+        } else if (deltaY > 0 && currentQuadrant === 0) {
+          // Wisch nach unten (+Z): Q0 → Q3
+          isSwiping = false;
+          performKipp('south');
+        } else if (deltaY > 0 && currentQuadrant === 1) {
+          // Wisch nach unten (+Z): Q1 → Q2
+          isSwiping = false;
+          performKipp('south_from_q1');
+        } else if (deltaY < 0 && currentQuadrant === 2) {
+          // Wisch nach oben (-Z): Q2 → Q1
+          isSwiping = false;
+          performKipp('north_from_q2');
+        }
+      }
+      // Q0 ↔ Q1: Wisch horizontal (+X / -X)
+      else if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
+        if (deltaX > 0 && currentQuadrant === 0) {
+          // Wisch nach rechts (+X): Q0 → Q1
+          isSwiping = false;
+          performKipp('east');
+        } else if (deltaX < 0 && currentQuadrant === 1) {
+          // Wisch nach links (-X): Q1 → Q0
+          isSwiping = false;
+          performKipp('west');
+        } else if (deltaX < 0 && currentQuadrant === 2) {
+          // Wisch nach links (-X): Q2 → Q3
+          isSwiping = false;
+          performKipp('west_from_q2');
+        } else if (deltaX > 0 && currentQuadrant === 3) {
+          // Wisch nach rechts (+X): Q3 → Q2
+          isSwiping = false;
+          performKipp('east_from_q3');
+        }
+      }
+      }
+    });
+    
+    renderer.domElement.addEventListener('touchend', () => {
+      isSwiping = false;
+    });
+    
+    // Universal-Kipp-Funktion
+    async function performKipp(direction) {
+      if (isAnimating) return;
+      isAnimating = true;
+      
+      let pivotPoint, axis, targetRotation, fromQ, toQ;
+      
+      if (direction === 'north') {
+        // Q3 → Q0: -Z Richtung, X-Achse
+        pivotPoint = new THREE.Vector3(-0.234375, 0, 0.109375);
+        axis = 'x';
+        targetRotation = -Math.PI / 2;
+        fromQ = 3;
+        toQ = 0;
+        console.log('Kippe nach Norden (-Z): Q3 → Q0');
+      } else if (direction === 'south') {
+        // Q0 → Q3: +Z Richtung, X-Achse
+        pivotPoint = new THREE.Vector3(-0.234375, 0, 0.109375);
+        axis = 'x';
+        targetRotation = Math.PI / 2;
+        fromQ = 0;
+        toQ = 3;
+        console.log('Kippe nach Süden (+Z): Q0 → Q3');
+      } else if (direction === 'east') {
+        // Q0 → Q1: +X Richtung, Z-Achse
+        pivotPoint = new THREE.Vector3(0, 0, 0.109375 + 0.234375);
+        axis = 'z';
+        targetRotation = -Math.PI / 2;
+        fromQ = 0;
+        toQ = 1;
+        console.log('Kippe nach Osten (+X): Q0 → Q1');
+      } else if (direction === 'west') {
+        // Q1 → Q0: -X Richtung, Z-Achse
+        pivotPoint = new THREE.Vector3(0, 0, 0.109375 + 0.234375);
+        axis = 'z';
+        targetRotation = Math.PI / 2;
+        fromQ = 1;
+        toQ = 0;
+        console.log('Kippe nach Westen (-X): Q1 → Q0');
+      } else if (direction === 'south_from_q1') {
+        // Q1 → Q2: +Z Richtung, X-Achse
+        pivotPoint = new THREE.Vector3(0.234375, 0, 0.109375);
+        axis = 'x';
+        targetRotation = Math.PI / 2;
+        fromQ = 1;
+        toQ = 2;
+        console.log('Kippe nach Süden (+Z): Q1 → Q2');
+      } else if (direction === 'north_from_q2') {
+        // Q2 → Q1: -Z Richtung, X-Achse
+        pivotPoint = new THREE.Vector3(0.234375, 0, 0.109375);
+        axis = 'x';
+        targetRotation = -Math.PI / 2;
+        fromQ = 2;
+        toQ = 1;
+        console.log('Kippe nach Norden (-Z): Q2 → Q1');
+      } else if (direction === 'west_from_q2') {
+        // Q2 → Q3: -X Richtung, Z-Achse
+        pivotPoint = new THREE.Vector3(0, 0, 0.109375 + 0.234375);
+        axis = 'z';
+        targetRotation = Math.PI / 2;
+        fromQ = 2;
+        toQ = 3;
+        console.log('Kippe nach Westen (-X): Q2 → Q3');
+      } else if (direction === 'east_from_q3') {
+        // Q3 → Q2: +X Richtung, Z-Achse
+        pivotPoint = new THREE.Vector3(0, 0, 0.109375 + 0.234375);
+        axis = 'z';
+        targetRotation = -Math.PI / 2;
+        fromQ = 3;
+        toQ = 2;
+        console.log('Kippe nach Osten (+X): Q3 → Q2');
+      }
+      
+      const pivotGroup = new THREE.Group();
+      pivotGroup.position.copy(pivotPoint);
       kipGroup.add(pivotGroup);
-
+      
+      // Hole Welt-Position des Würfels
       cube.updateMatrixWorld();
-      const worldPos = new THREE.Vector3();
-      cube.getWorldPosition(worldPos);
+      const cubeWorldPos = new THREE.Vector3();
+      cube.getWorldPosition(cubeWorldPos);
+      
       kipGroup.remove(cube);
-      cube.position.copy(worldPos.sub(pivotPos));
+      
+      const relativePos = cubeWorldPos.clone().sub(pivotPoint);
+      cube.position.copy(relativePos);
       pivotGroup.add(cube);
-
-      pivotAxis = axis;
-      pivotSign = sign;
-      pivotTarget = target;
-      fromQuadrant = fromQ;
-      toQuadrant = toQ;
-      currentAngle = 0;
-      angularVelocity = 0;
-      isFalling = false;
+      
+      const duration = 800;
+      const startTime = Date.now();
+      
+      function animate() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const eased = progress < 0.5 
+          ? 2 * progress * progress 
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        
+        if (axis === 'x') {
+          pivotGroup.rotation.x = eased * targetRotation;
+        } else {
+          pivotGroup.rotation.z = eased * targetRotation;
+        }
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          finalizeKipp(toQ);
+        }
+      }
+      
+      function finalizeKipp(newQ) {
+        cube.updateMatrixWorld();
+        const newWorldPos = new THREE.Vector3();
+        cube.getWorldPosition(newWorldPos);
+        
+        pivotGroup.remove(cube);
+        kipGroup.remove(pivotGroup);
+        
+        // Position relativ zu kipGroup (kipGroup ist bei 0,0,0)
+        cube.position.copy(newWorldPos);
+        cube.rotation.set(0, 0, 0);
+        kipGroup.add(cube);
+        
+        currentQuadrant = newQ;
+        console.log('Würfel jetzt in Q' + newQ);
+        isAnimating = false;
+      }
+      
+      animate();
     }
 
-    function handleStart(e) {
-      if (currentMode !== 'kanten' || gamePhase !== 'kippen') return;
-      if (isFalling || pivotGroup) return;
-      e.preventDefault();
-      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-      dragStartX = clientX;
-      dragStartY = clientY;
+    // =========================
+    // TOUCH/MOUSE CONTROLS - DEAKTIVIERT (Kipp-Mechanik aktiv)
+    // =========================
+    /*
+    let isDragging = false;
+    let previousMouse = { x: 0, y: 0 };
+    let cameraRotation = { horizontal: 0, vertical: 0 };
+    let clickPointZ = 0;  // Z-Koordinate des 3D-Klickpunkts
+
+    const raycaster = new THREE.Raycaster();
+    const mouse2D = new THREE.Vector2();
+
+    function onPointerDown(e) {
       isDragging = true;
-    }
-
-    function handleMove(e) {
-      if (!isDragging || currentMode !== 'kanten' || gamePhase !== 'kippen') return;
-      e.preventDefault();
-      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-
-      if (!pivotGroup) {
-        const dx = clientX - dragStartX;
-        const dy = clientY - dragStartY;
-
-        if (Math.abs(dx) > 18 || Math.abs(dy) > 18) {
-          let direction;
-          if (Math.abs(dy) > Math.abs(dx)) {
-            // Vertical
-            if (dy < 0 && currentQuadrant === 3) direction = 'north';
-            else if (dy > 0 && currentQuadrant === 0) direction = 'south';
-            else if (dy > 0 && currentQuadrant === 1) direction = 'south_from_q1';
-            else if (dy < 0 && currentQuadrant === 2) direction = 'north_from_q2';
-          } else {
-            // Horizontal
-            if (dx > 0 && currentQuadrant === 0) direction = 'east';
-            else if (dx < 0 && currentQuadrant === 1) direction = 'west';
-            else if (dx < 0 && currentQuadrant === 2) direction = 'west_from_q2';
-            else if (dx > 0 && currentQuadrant === 3) direction = 'east_from_q3';
-          }
-          if (direction) startPivot(direction);
-        }
-      }
-
-      if (pivotGroup) {
-        const delta = (pivotAxis === 'x' ? (clientY - dragStartY) : (clientX - dragStartX)) * sensitivity;
-        currentAngle = Math.max(0, Math.min(pivotTarget, currentAngle + delta));  // Angepasste Sign-Handhabung
-        pivotGroup.rotation[pivotAxis] = pivotSign * currentAngle;
-        angularVelocity = delta / 0.016;  // Geschwindigkeit basierend auf Delta pro Frame (ca. 60fps)
-        dragStartX = clientX;
-        dragStartY = clientY;
+      const clientX = e.clientX || e.touches[0].clientX;
+      const clientY = e.clientY || e.touches[0].clientY;
+      
+      previousMouse.x = clientX;
+      previousMouse.y = clientY;
+      
+      // Raycasting: Wo im 3D-Raum wird geklickt?
+      mouse2D.x = (clientX / 360) * 2 - 1;
+      mouse2D.y = -(clientY / 720) * 2 + 1;
+      
+      raycaster.setFromCamera(mouse2D, camera);
+      
+      // Intersection mit der π1-Ebene (Y=0)
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const intersect = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, intersect);
+      
+      if (intersect) {
+        clickPointZ = intersect.z;  // Z-Koordinate des Trefferpunkts speichern
       }
     }
 
-    function handleEnd() {
-      if (isDragging) {
-        isDragging = false;
-        if (pivotGroup && currentAngle > 0.02) {
-          isFalling = true;
-          fallStartTime = performance.now();
-        } else if (pivotGroup) {
-          resetCube();
-        }
-      }
+    function onPointerMove(e) {
+      if (!isDragging) return;
+      
+      const currentX = e.clientX || e.touches[0].clientX;
+      const currentY = e.clientY || e.touches[0].clientY;
+      
+      const deltaX = currentX - previousMouse.x;
+      const deltaY = currentY - previousMouse.y;
+      
+      // Horizontal: Drehrichtung abhängig von 3D-Trefferpunkt (Raycasting)
+      // Anklickpunkt in -Z (nördlich): Rechtswisch = CW
+      // Anklickpunkt in +Z (südlich): Rechtswisch = CCW
+      const directionMultiplier = clickPointZ < 0 ? 1 : -1;
+      cameraRotation.horizontal += deltaX * 0.003 * directionMultiplier;
+      cameraRotation.horizontal = Math.max(-0.5, Math.min(0.5, cameraRotation.horizontal));
+      
+      // Vertikal: Nach unten wischen (zu sich hin) = näher + steiler von oben
+      // Nach oben wischen (von sich weg) = weiter + flacher
+      cameraRotation.vertical -= deltaY * 0.004; // Erhöhte Sensitivity für flüssigere Bewegung
+      // Höhenlimit: Max -1.0 für max 8 Zellen Breite + 0.5 Zellen Sicherheitsrand
+      cameraRotation.vertical = Math.max(-1.0, Math.min(0.3, cameraRotation.vertical));
+      
+      const baseZ = 2.15625;  // Angepasst für Grid mit Achse zwischen Zeile 6 und 7
+      const baseX = 0;
+      const baseY = 2.143;
+      
+      const verticalAngle = cameraRotation.vertical;
+      
+      // Zoom und Neigung gekoppelt: steiler = näher, flacher = weiter
+      const minRadius = 1.8;   // Erhöht für bessere flache Ansicht
+      const maxRadius = 1.6;   // Max 8 Zellen TOTAL (-4 bis +4) + 0.5 Sicherheitsrand in Draufsicht
+      const radiusRange = maxRadius - minRadius;
+      const angleRange = 1.0 + 0.3; // -1.0 bis 0.3 (Höhenlimit für max 8.5 Zellen Breite)
+      const normalizedAngle = (verticalAngle + 1.0) / angleRange; // 0 bis 1
+      const radius = maxRadius - (normalizedAngle * radiusRange); // Invertiert: steiler = kleiner radius
+      
+      camera.position.x = baseX + Math.sin(cameraRotation.horizontal) * 0.5;
+      camera.position.z = radius * Math.cos(verticalAngle) + Math.cos(cameraRotation.horizontal) * 0.3;
+      camera.position.y = baseY + radius * Math.sin(-verticalAngle);
+      
+      // Glatter Übergang für lookAt
+      const lookAtBlend = Math.max(0, Math.min(1, (verticalAngle + 0.7) / 0.4)); // Smooth 0-1 zwischen -0.7 und -0.3
+      const lookAtY = 0.234375 + (0.46875 - 0.234375) * (1 - lookAtBlend);
+      const lookAtZ = 0.7 + (0.421875 - 0.7) * lookAtBlend; // Grid-Zentrum 1.5 Zellen verschoben
+      camera.lookAt(0, lookAtY, lookAtZ);
+      
+      previousMouse.x = currentX;
+      previousMouse.y = currentY;
     }
 
-    renderer.domElement.addEventListener('touchstart', handleStart);
-    renderer.domElement.addEventListener('touchmove', handleMove);
-    renderer.domElement.addEventListener('touchend', handleEnd);
-
-    renderer.domElement.addEventListener('mousedown', handleStart);
-    renderer.domElement.addEventListener('mousemove', handleMove);
-    renderer.domElement.addEventListener('mouseup', handleEnd);
-    renderer.domElement.addEventListener('mouseleave', handleEnd);  // Für Mouse, falls Maus das Canvas verlässt
-
-    function resetCube() {
-      if (!pivotGroup) return;
-      cube.updateMatrixWorld();
-      const pos = new THREE.Vector3();
-      cube.getWorldPosition(pos);
-      pivotGroup.remove(cube);
-      kipGroup.remove(pivotGroup);
-      pivotGroup = null;
-      cube.position.copy(pos);
-      cube.rotation.set(0, 0, 0);
-      kipGroup.add(cube);
-      currentQuadrant = fromQuadrant;
-      currentAngle = 0;
-      angularVelocity = 0;
-      isFalling = false;
+    function onPointerUp() {
+      isDragging = false;
     }
 
-    function completeKipp() {
-      if (!pivotGroup) return;
-      cube.updateMatrixWorld();
-      const pos = new THREE.Vector3();
-      cube.getWorldPosition(pos);
-      pivotGroup.remove(cube);
-      kipGroup.remove(pivotGroup);
-      pivotGroup = null;
-      cube.position.copy(pos);
-      cube.rotation.set(0, 0, 0);
-      kipGroup.add(cube);
-      currentQuadrant = toQuadrant;
-      currentAngle = 0;
-      angularVelocity = 0;
-      isFalling = false;
-      kippCount++;
-    }
+    */
 
     // Animation loop
-    let lastTime = performance.now();
     function animate() {
       requestAnimationFrame(animate);
-      const now = performance.now();
-      const dt = Math.min((now - lastTime) / 1000, 0.033);
-      lastTime = now;
-
-      if (isFalling && pivotGroup) {
-        // Physik: Schwerkraft-basiertes Kippen
-        const phi = Math.abs(currentAngle) - Math.PI / 4;  // Absolut, da Richtung durch Sign gehandhabt
-        let torque = gravityTorque * Math.sin(phi);
-        torque = (currentAngle > Math.PI / 4 ? torque : -torque);  // Richtung basierend auf Winkel
-        angularVelocity += torque * dt * Math.sign(pivotSign);  // Anpassung für Richtung
-        angularVelocity *= Math.exp(-damping * dt);
-
-        currentAngle += angularVelocity * dt;
-
-        if (currentAngle >= pivotTarget) {
-          currentAngle = pivotTarget;
-          completeKipp();
-        } else if (currentAngle <= 0) {
-          currentAngle = 0;
-          resetCube();
-        } else {
-          pivotGroup.rotation[pivotAxis] = pivotSign * currentAngle;
-        }
-      }
-
       renderer.render(scene, camera);
     }
 
