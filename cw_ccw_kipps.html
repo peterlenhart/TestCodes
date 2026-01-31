@@ -612,9 +612,8 @@
     // f2: 27=S1, 26=S2, 22=S3, 19=S4
     // deck[0-3] → f0 Slots, deck[4-7] → f1 Slots, deck[8-11] → f2 Slots
 
-    // Canvas-Textur: 3x3 Gitter, nur bestimmte Zellen beschriften
-    // slotMap = { "row,col": Zahl } – nur Slots bekommen Werte
-    function createFaceTexture(slotMap, textRotation) {
+    // Canvas-Textur: 3x3 Gitter, slotMap = { "row,col": { val, rot } }
+    function createFaceTexture(slotMap) {
       const canvas = document.createElement('canvas');
       canvas.width = 256;
       canvas.height = 256;
@@ -625,19 +624,28 @@
       ctx.fillStyle = '#a08060';
       ctx.fillRect(0, 0, 256, 256);
 
-      // Nur Slot-Zellen beschriften
+      // Slot-Zellen beschriften
       ctx.fillStyle = '#2a1810';
       ctx.font = 'bold 56px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       for (const key in slotMap) {
         const [r, c] = key.split(',').map(Number);
+        const { val, rot } = slotMap[key];
         const cx = c * cell + cell / 2;
         const cy = r * cell + cell / 2;
         ctx.save();
         ctx.translate(cx, cy);
-        if (textRotation) ctx.rotate(textRotation);
-        ctx.fillText(slotMap[key].toString(), 0, 0);
+        ctx.rotate(rot);
+        // Zweistellige Zahlen leicht nach links für optische Zentrierung
+        const xOff = val >= 10 ? -4 : 0;
+        ctx.fillText(val.toString(), xOff, 0);
+        // Punkt bei 6 und 9: Satzpunkt nach der Zahl, gleiche Baseline
+        if (val === 6 || val === 9) {
+          ctx.beginPath();
+          ctx.arc(xOff + 22, 18, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
       }
 
@@ -659,37 +667,38 @@
       return canvas;
     }
 
-    function mat(slotMap, textRotation) {
+    function mat(slotMap) {
       return new THREE.MeshStandardMaterial({
-        map: new THREE.CanvasTexture(createFaceTexture(slotMap || {}, textRotation)),
+        map: new THREE.CanvasTexture(createFaceTexture(slotMap || {})),
         metalness: 0.3, roughness: 0.7
       });
     }
 
     // Material-Array: [+X, -X, +Y, -Y, +Z, -Z]
-    // f0 (+Z): Zelle 7=row2col0=S1, 4=row1col0=S2, 2=row0col1=S3, 3=row0col2=S4
-    // f1 (-X): Zelle 10=row0col0=S1, 11=row0col1=S2, 15=row1col2=S3, 18=row2col2=S4
-    // f2 (+Y): Zelle 27=row2col2=S1, 26=row2col1=S2, 22=row1col0=S3, 19=row0col0=S4
+    // Rotationen per-Slot:
+    // f2 (+Y): S1,S2 von Süden lesbar (0), S3,S4 von Westen lesbar (-π/2)
+    // f0 (+Z): S1,S2 von Westen lesbar (-π/2), S3,S4 stehen Kopf (π)
+    // f1 (-X): S1,S2 stehen Kopf (π), S3,S4 von Süden lesbar (π/2)
     const cubeMaterial = [
       mat(null),            // [0] +X  – leer
-      mat({                 // [1] -X  = f1 (wird nach Ost-Kipp auf top) → Text 90° CW
-        '0,0': deck[4],    // S1 = Zelle 10
-        '0,1': deck[5],    // S2 = Zelle 11
-        '1,2': deck[6],    // S3 = Zelle 15
-        '2,2': deck[7]     // S4 = Zelle 18
-      }, Math.PI / 2),
+      mat({                 // [1] -X  = f1
+        '0,0': { val: deck[4],  rot: Math.PI },       // S1 – Kopf
+        '0,1': { val: deck[5],  rot: Math.PI },       // S2 – Kopf
+        '1,2': { val: deck[6],  rot: -Math.PI / 2 },   // S3
+        '2,2': { val: deck[7],  rot: -Math.PI / 2 }    // S4
+      }),
       mat({                 // [2] +Y  = f2
-        '2,2': deck[8],    // S1 = Zelle 27
-        '2,1': deck[9],    // S2 = Zelle 26
-        '1,0': deck[10],   // S3 = Zelle 22
-        '0,0': deck[11]    // S4 = Zelle 19
+        '2,2': { val: deck[8],  rot: 0 },              // S1 – von Süden lesbar
+        '2,1': { val: deck[9],  rot: 0 },              // S2 – von Süden lesbar
+        '1,0': { val: deck[10], rot: Math.PI / 2 },    // S3
+        '0,0': { val: deck[11], rot: Math.PI / 2 }     // S4
       }),
       mat(null),            // [3] -Y  – leer
       mat({                 // [4] +Z  = f0
-        '2,0': deck[0],    // S1 = Zelle 7
-        '1,0': deck[1],    // S2 = Zelle 4
-        '0,1': deck[2],    // S3 = Zelle 2
-        '0,2': deck[3]     // S4 = Zelle 3
+        '2,0': { val: deck[0],  rot: Math.PI / 2 },    // S1
+        '1,0': { val: deck[1],  rot: Math.PI / 2 },    // S2
+        '0,1': { val: deck[2],  rot: Math.PI },         // S3 – Kopf
+        '0,2': { val: deck[3],  rot: Math.PI }          // S4 – Kopf
       }),
       mat(null)             // [5] -Z  – leer
     ];
