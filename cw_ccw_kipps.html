@@ -153,10 +153,12 @@
       font-size: 50px;
       pointer-events: none;
       top: 270px;
-      display: none;
+      display: none; /* Unsichtbar */
     }
 
-    .hidden { display: none !important; }
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -176,13 +178,20 @@
     // Scene Setup
     // =========================
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1c1c1e);
+    scene.background = new THREE.Color(0x1c1c1e); // Anthrazit grau-schwarz
 
     const containerWidth = 360;
     const containerHeight = 720;
     
-    const camera = new THREE.PerspectiveCamera(50, containerWidth / containerHeight, 0.01, 100);
+    // PERSPEKTIVKAMERA für realistischen Fluchtpunkt
+    const camera = new THREE.PerspectiveCamera(
+      50,
+      containerWidth / containerHeight,
+      0.01,
+      100
+    );
     
+    // FIXIERTE Kamera: 85° Draufsicht
     const baseY = 2.143;
     const verticalAngle = -1.0;
     const horizontal = 0;
@@ -197,13 +206,17 @@
     const lookAtBlend = Math.max(0, Math.min(1, (verticalAngle + 0.7) / 0.4));
     const lookAtY = 0.234375 + (0.46875 - 0.234375) * (1 - lookAtBlend);
     const lookAtZ = 0.7 + (0.421875 - 0.7) * lookAtBlend;
+    
     camera.lookAt(0, lookAtY, lookAtZ);
     
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(360, 720);
     renderer.setPixelRatio(window.devicePixelRatio);
+    
+    // SCHATTEN AKTIVIEREN
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
     document.getElementById('container').appendChild(renderer.domElement);
 
     // =========================
@@ -230,10 +243,14 @@
     scene.add(fillLight);
 
     // =========================
-    // TISCH
+    // TISCH (π1 Ebene) mit Schatten-Empfang
     // =========================
     const tableGeometry = new THREE.PlaneGeometry(5, 5);
-    const tableMaterial = new THREE.MeshStandardMaterial({ color: 0x2a1810, roughness: 0.8, metalness: 0.1 });
+    const tableMaterial = new THREE.MeshStandardMaterial({
+      color: 0x2a1810,
+      roughness: 0.8,
+      metalness: 0.1
+    });
     const table = new THREE.Mesh(tableGeometry, tableMaterial);
     table.rotation.x = -Math.PI / 2;
     table.position.y = 0;
@@ -241,10 +258,11 @@
     scene.add(table);
 
     // =========================
-    // GRID
+    // 3D GRID auf π1
     // =========================
-    const gridSize = 16 * 0.15625;
+    const gridSize = 16 * 0.15625; // 2.5 Einheiten
     const gridDivisions = 16;
+    
     const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0xff8800, 0xff8800);
     gridHelper.position.y = 0.001;
     gridHelper.position.z = 0.421875;
@@ -260,41 +278,65 @@
     scene.add(gridHelper2);
 
     // =========================
-    // ACHSEN
+    // ACHSEN (X und Z)
     // =========================
-    const axesMaterialPi1 = new THREE.LineBasicMaterial({ color: 0xff8800, linewidth: 2, opacity: 0.9, transparent: true });
-    const axesMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2, opacity: 0.9, transparent: true });
+    const axesMaterialPi1 = new THREE.LineBasicMaterial({ 
+      color: 0xff8800, 
+      linewidth: 2,
+      opacity: 0.9,
+      transparent: true
+    });
+    
+    const axesMaterial = new THREE.LineBasicMaterial({ 
+      color: 0xffffff, 
+      linewidth: 2,
+      opacity: 0.9,
+      transparent: true
+    });
 
     const xAxisGeometry1 = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(-2.5, 0.002, 0.109375),
       new THREE.Vector3(2.5, 0.002, 0.109375)
     ]);
-    scene.add(new THREE.Line(xAxisGeometry1, axesMaterialPi1));
+    const xAxis1 = new THREE.Line(xAxisGeometry1, axesMaterialPi1);
+    scene.add(xAxis1);
 
     const zAxisGeometry1 = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(0, 0.002, -2.5),
       new THREE.Vector3(0, 0.002, 2.5)
     ]);
-    scene.add(new THREE.Line(zAxisGeometry1, axesMaterialPi1));
+    const zAxis1 = new THREE.Line(zAxisGeometry1, axesMaterialPi1);
+    scene.add(zAxis1);
 
     const xAxisGeometry2 = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(-2.5, 0.46875, 0.109375),
       new THREE.Vector3(2.5, 0.46875, 0.109375)
     ]);
-    scene.add(new THREE.Line(xAxisGeometry2, axesMaterial));
+    const xAxis2 = new THREE.Line(xAxisGeometry2, axesMaterial);
+    scene.add(xAxis2);
 
     const zAxisGeometry2 = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(0, 0.46875, -2.5),
       new THREE.Vector3(0, 0.46875, 2.5)
     ]);
-    scene.add(new THREE.Line(zAxisGeometry2, axesMaterial));
+    const zAxis2 = new THREE.Line(zAxisGeometry2, axesMaterial);
+    scene.add(zAxis2);
 
     // =========================
-    // WÄNDE
+    // WAND
     // =========================
-    const wallGeometry = new THREE.BoxGeometry(0.9375, 0.46875, 0.0335);
-    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.7, roughness: 0.3 });
-
+    const wallGeometry = new THREE.BoxGeometry(
+      0.9375,
+      0.46875,
+      0.0335
+    );
+    
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      color: 0xc0c0c0,
+      metalness: 0.7,
+      roughness: 0.3
+    });
+    
     const wall = new THREE.Mesh(wallGeometry, wallMaterial);
     wall.position.set(0, 0.234375, 0.597125);
     wall.castShadow = true;
@@ -307,14 +349,21 @@
     wall2.receiveShadow = true;
     scene.add(wall2);
 
-    const sideWallGeometry = new THREE.BoxGeometry(0.0335, 0.46875, 1.00675);
-
+    // =========================
+    // SEITENWÄNDE (parallel zur Z-Achse)
+    // =========================
+    const sideWallGeometry = new THREE.BoxGeometry(
+      0.0335,
+      0.46875,
+      1.00675
+    );
+    
     const wallLeft = new THREE.Mesh(sideWallGeometry, wallMaterial);
     wallLeft.position.set(-0.48550, 0.234375, 0.1105);
     wallLeft.castShadow = true;
     wallLeft.receiveShadow = true;
     scene.add(wallLeft);
-
+    
     const wallRight = new THREE.Mesh(sideWallGeometry, wallMaterial);
     wallRight.position.set(0.48550, 0.234375, 0.1105);
     wallRight.castShadow = true;
@@ -322,12 +371,16 @@
     scene.add(wallRight);
 
     // =========================
-    // WÜRFEL
+    // WÜRFEL (3 Zellen Kantenlänge)
     // =========================
-    const cubeSize = 0.46875;
+    const cubeSize = 0.46875; // 3 Zellen = 70mm
     const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
-    const cubeMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, metalness: 0.3, roughness: 0.7 });
-
+    const cubeMaterial = new THREE.MeshStandardMaterial({
+      color: 0xff0000,
+      metalness: 0.3,
+      roughness: 0.7
+    });
+    
     // =========================
     // MODUS 1: ECKSTAND-WÜRFEL
     // =========================
@@ -347,36 +400,55 @@
     eckCube.castShadow = true;
     eckCube.receiveShadow = true;
     eckPivot.add(eckCube);
-
-    // 3×3 Grid-Linien auf Eckstand-Würfel (dein Code bleibt)
-    const gridLineMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2, transparent: true, opacity: 0.4 });
+    
+    // 3×3 Grid-Linien auf Eckstand-Würfel
+    const gridLineMaterial = new THREE.LineBasicMaterial({ 
+      color: 0x000000,
+      linewidth: 2,
+      transparent: true,
+      opacity: 0.4
+    });
+    
     const third = cubeSize / 3;
     const half = cubeSize / 2;
-
+    
     function createFaceGrid(normal, up) {
       const gridGroup = new THREE.Group();
+      
       for (let i = 1; i <= 2; i++) {
         const y = -half + i * third;
-        const points = [ new THREE.Vector3(-half, y, 0), new THREE.Vector3(half, y, 0) ];
-        gridGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), gridLineMaterial));
+        const points = [
+          new THREE.Vector3(-half, y, 0),
+          new THREE.Vector3(half, y, 0)
+        ];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const line = new THREE.Line(geometry, gridLineMaterial);
+        gridGroup.add(line);
       }
+      
       for (let i = 1; i <= 2; i++) {
         const x = -half + i * third;
-        const points = [ new THREE.Vector3(x, -half, 0), new THREE.Vector3(x, half, 0) ];
-        gridGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), gridLineMaterial));
+        const points = [
+          new THREE.Vector3(x, -half, 0),
+          new THREE.Vector3(x, half, 0)
+        ];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const line = new THREE.Line(geometry, gridLineMaterial);
+        gridGroup.add(line);
       }
+      
       gridGroup.lookAt(normal);
       gridGroup.position.copy(normal.multiplyScalar(half + 0.001));
       return gridGroup;
     }
     
     const faces = [
-      { normal: new THREE.Vector3(0, 0, 1),  up: new THREE.Vector3(0, 1, 0) }, // +Z
-      { normal: new THREE.Vector3(0, 0, -1), up: new THREE.Vector3(0, 1, 0) }, // -Z
-      { normal: new THREE.Vector3(1, 0, 0),  up: new THREE.Vector3(0, 1, 0) }, // +X
-      { normal: new THREE.Vector3(-1, 0, 0), up: new THREE.Vector3(0, 1, 0) }, // -X
-      { normal: new THREE.Vector3(0, 1, 0),  up: new THREE.Vector3(0, 0, -1) }, // +Y
-      { normal: new THREE.Vector3(0, -1, 0), up: new THREE.Vector3(0, 0, 1) }  // -Y
+      { normal: new THREE.Vector3(0, 0, 1), up: new THREE.Vector3(0, 1, 0) },
+      { normal: new THREE.Vector3(0, 0, -1), up: new THREE.Vector3(0, 1, 0) },
+      { normal: new THREE.Vector3(1, 0, 0), up: new THREE.Vector3(0, 1, 0) },
+      { normal: new THREE.Vector3(-1, 0, 0), up: new THREE.Vector3(0, 1, 0) },
+      { normal: new THREE.Vector3(0, 1, 0), up: new THREE.Vector3(0, 0, -1) },
+      { normal: new THREE.Vector3(0, -1, 0), up: new THREE.Vector3(0, 0, 1) }
     ];
     
     faces.forEach(face => {
@@ -384,112 +456,87 @@
       eckCube.add(grid);
     });
 
-    // ==========================================================
-    // ZAHLEN AUF 3 SICHTBAREN FACES: +X (Ost), -X (West), +Z
-    // ==========================================================
-    function shuffle(arr) {
-      for (let i = arr.length - 1; i > 0; i--) {
+    // =========================
+    // FACE 0 (Süd / +Z) – S1..S4 Randomzahlen (1..12 ohne Wiederholung)
+    // =========================
+    function shuffledDeck12() {
+      const deck = Array.from({ length: 12 }, (_, i) => i + 1);
+      for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
+        [deck[i], deck[j]] = [deck[j], deck[i]];
       }
-      return arr;
+      return deck;
     }
 
-    function makeNumberTexture(n) {
-      const c = document.createElement('canvas');
-      c.width = 256;
-      c.height = 256;
-      const ctx = c.getContext('2d');
+    function makeNumberTexture(num, size = 256) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
 
-      // transparent background
-      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillRect(0, 0, size, size);
 
-      // number
-      ctx.font = 'bold 140px system-ui, Arial';
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+      ctx.lineWidth = 10;
+      ctx.strokeRect(0, 0, size, size);
+
+      ctx.fillStyle = '#000000';
+      ctx.font = `bold ${Math.floor(size * 0.55)}px system-ui, -apple-system, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      ctx.fillText(String(num), size / 2, size / 2);
 
-      // outline
-      ctx.lineWidth = 16;
-      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-      ctx.strokeText(String(n), 128, 140);
-
-      // fill
-      ctx.fillStyle = 'rgba(0,0,0,0.95)';
-      ctx.fillText(String(n), 128, 140);
-
-      const tex = new THREE.CanvasTexture(c);
-      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.anisotropy = 4;
       tex.needsUpdate = true;
       return tex;
     }
 
-    function addNumbersToFace(parent, normal, up, numbers9, planeSize, eps) {
-      const n = normal.clone().normalize();
-      const v = up.clone().normalize();
-      const u = new THREE.Vector3().crossVectors(n, v).normalize(); // quer
+    // Annahme: von außen auf Face blickend
+    // Spalten A|B|C = links->rechts
+    // Zeilen 1|2|3 = oben->unten
+    function faceSlotCenter(row, col, half, third) {
+      const colIndex = (col === 'A') ? 0 : (col === 'B') ? 1 : 2;
+      const rowIndex = row - 1; // 0..2
 
-      // Basis-Matrix (u,v,n) => Rotation
-      const basis = new THREE.Matrix4().makeBasis(u, v, n);
-      const quat = new THREE.Quaternion().setFromRotationMatrix(basis);
-
-      // 3x3 Centers
-      // i: 0..2 top->bottom, j: 0..2 left->right im lokalen Face-System
-      let idx = 0;
-      for (let i = 0; i < 3; i++) {
-        for (let j = 0; j < 3; j++) {
-          const num = numbers9[idx++];
-
-          const tex = makeNumberTexture(num);
-          const mat = new THREE.MeshBasicMaterial({
-            map: tex,
-            transparent: true,
-            side: THREE.DoubleSide,
-            depthTest: false,   // damit garantiert sichtbar
-            depthWrite: false
-          });
-
-          const geo = new THREE.PlaneGeometry(planeSize, planeSize);
-          const plate = new THREE.Mesh(geo, mat);
-
-          // Position: auf Face, leicht nach außen
-          const x = (j - 1) * (cubeSize / 3);
-          const y = (1 - i) * (cubeSize / 3);
-
-          // local face coordinates: u*x + v*y + n*(half+eps)
-          const pos = new THREE.Vector3()
-            .add(u.clone().multiplyScalar(x))
-            .add(v.clone().multiplyScalar(y))
-            .add(n.clone().multiplyScalar(half + eps));
-
-          plate.position.copy(pos);
-          plate.quaternion.copy(quat);
-
-          // draw priority
-          plate.renderOrder = 999;
-
-          parent.add(plate);
-        }
-      }
+      const x = (-half) + (colIndex + 0.5) * third;
+      const y = (half) - (rowIndex + 0.5) * third;
+      return { x, y };
     }
 
-    // Deck 1..27
-    const deck27 = shuffle(Array.from({ length: 27 }, (_, i) => i + 1));
+    function addNumberTileToFace0(row, col, value) {
+      const eps = 0.0015;
+      const tileSize = third * 0.98;
 
-    const east9 = deck27.slice(0, 9);    // Face 2 (+X) - Ost
-    const west9 = deck27.slice(9, 18);   // Face 1 (-X) - West  ✅ dein Wunsch
-    const front9 = deck27.slice(18, 27); // Face 0 (+Z)
+      const { x, y } = faceSlotCenter(row, col, half, third);
 
-    // Plate Size etwas kleiner als ein Feld, damit Raster sichtbar bleibt
-    const plateSize = (cubeSize / 3) * 0.78;
-    const eps = 0.0025;
+      const tileGeo = new THREE.PlaneGeometry(tileSize, tileSize);
+      const tileMat = new THREE.MeshBasicMaterial({
+        map: makeNumberTexture(value),
+        transparent: true
+      });
 
-    // Face2 Ost (+X)
-    addNumbersToFace(eckCube, new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), east9, plateSize, eps);
-    // Face1 West (-X)  ✅
-    addNumbersToFace(eckCube, new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 1, 0), west9, plateSize, eps);
-    // Face0 (+Z)
-    addNumbersToFace(eckCube, new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 1, 0), front9, plateSize, eps);
+      const tile = new THREE.Mesh(tileGeo, tileMat);
+      tile.position.set(x, y, half + eps); // +Z Face
+      tile.lookAt(new THREE.Vector3(0, 0, 1));
+      eckCube.add(tile);
+      return tile;
+    }
+
+    const deck = shuffledDeck12();
+    const S1 = deck[0];
+    const S2 = deck[1];
+    const S3 = deck[2];
+    const S4 = deck[3];
+    console.log('Face0 Slots:', { S1, S2, S3, S4 });
+
+    // Face0: S1 A2, S2 A3, S3 B1, S4 C1
+    addNumberTileToFace0(2, 'A', S1);
+    addNumberTileToFace0(3, 'A', S2);
+    addNumberTileToFace0(1, 'B', S3);
+    addNumberTileToFace0(1, 'C', S4);
 
     // =========================
     // MODUS 2: KANTEN-KIPP-WÜRFEL
@@ -504,6 +551,9 @@
     cube.receiveShadow = true;
     kipGroup.add(cube);
 
+    // =========================
+    // OBERE OSTKANTE (grün markiert zur Kontrolle)
+    // =========================
     const edgeGeometry = new THREE.CylinderGeometry(0.008, 0.008, cubeSize, 8);
     const edgeMaterial = new THREE.MeshStandardMaterial({
       color: 0x00ff00,
@@ -515,7 +565,11 @@
     
     const upperEastEdge = new THREE.Mesh(edgeGeometry, edgeMaterial);
     upperEastEdge.rotation.x = Math.PI / 2;
-    upperEastEdge.position.set(0, 0.46875, 0.109375 + cubeSize / 2);
+    upperEastEdge.position.set(
+      0,
+      0.46875,
+      0.109375 + cubeSize / 2
+    );
     kipGroup.add(upperEastEdge);
 
     // =========================
@@ -543,6 +597,7 @@
       countdownTimer = setInterval(() => {
         countdownValue--;
         countdown.textContent = countdownValue;
+        
         if (countdownValue <= 0) {
           stopCountdown();
           if (onComplete) onComplete();
@@ -567,9 +622,12 @@
     function phaseSchauenToKippen() {
       gamePhase = 'kippen';
       currentMode = 'kanten';
+      
       eckGroup.visible = false;
       kipGroup.visible = true;
+      
       hintText.textContent = 'KIPPE UND MERKE!';
+      
       startCountdown(() => {
         if (gamePhase === 'kippen') {
           phaseKippenToSpielen();
@@ -596,25 +654,30 @@
       gamePhase = 'schauen';
       currentMode = 'eck';
       kippCount = 0;
+      
       hintText.style.display = 'block';
       hintText.textContent = 'SYMBOLE MERKEN';
       actionButton.textContent = 'weiter';
       actionButton.classList.remove('pulse');
+      
       eckGroup.visible = true;
       kipGroup.visible = false;
+      
       cube.position.set(-offset, offset, 0.109375 + offset);
       cube.rotation.set(0, 0, 0);
       currentQuadrant = 3;
+      
       startCountdown(() => {
         if (gamePhase === 'schauen') {
           phaseSchauenToKippen();
         }
       });
+      
       console.log('Zurück zu Startposition');
     });
 
     // =========================
-    // WÜRFEL-KIPPMECHANIK - UNVERÄNDERT
+    // WÜRFEL-KIPPMECHANIK - Zwei Richtungen
     // =========================
     let isSwiping = false;
     let swipeStartX = 0;
@@ -636,20 +699,40 @@
     renderer.domElement.addEventListener('touchmove', (e) => {
       if (currentMode === 'kanten' && isSwiping && !isAnimating && gamePhase === 'kippen') {
         e.preventDefault();
+        
         const touch = e.touches[0];
         const deltaX = touch.clientX - swipeStartX;
         const deltaY = touch.clientY - swipeStartY;
-
+      
         if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 30) {
-          if (deltaY < 0 && currentQuadrant === 3) { isSwiping = false; performKipp('north'); }
-          else if (deltaY > 0 && currentQuadrant === 0) { isSwiping = false; performKipp('south'); }
-          else if (deltaY > 0 && currentQuadrant === 1) { isSwiping = false; performKipp('south_from_q1'); }
-          else if (deltaY < 0 && currentQuadrant === 2) { isSwiping = false; performKipp('north_from_q2'); }
-        } else if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
-          if (deltaX > 0 && currentQuadrant === 0) { isSwiping = false; performKipp('east'); }
-          else if (deltaX < 0 && currentQuadrant === 1) { isSwiping = false; performKipp('west'); }
-          else if (deltaX < 0 && currentQuadrant === 2) { isSwiping = false; performKipp('west_from_q2'); }
-          else if (deltaX > 0 && currentQuadrant === 3) { isSwiping = false; performKipp('east_from_q3'); }
+          if (deltaY < 0 && currentQuadrant === 3) {
+            isSwiping = false;
+            performKipp('north');
+          } else if (deltaY > 0 && currentQuadrant === 0) {
+            isSwiping = false;
+            performKipp('south');
+          } else if (deltaY > 0 && currentQuadrant === 1) {
+            isSwiping = false;
+            performKipp('south_from_q1');
+          } else if (deltaY < 0 && currentQuadrant === 2) {
+            isSwiping = false;
+            performKipp('north_from_q2');
+          }
+        }
+        else if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
+          if (deltaX > 0 && currentQuadrant === 0) {
+            isSwiping = false;
+            performKipp('east');
+          } else if (deltaX < 0 && currentQuadrant === 1) {
+            isSwiping = false;
+            performKipp('west');
+          } else if (deltaX < 0 && currentQuadrant === 2) {
+            isSwiping = false;
+            performKipp('west_from_q2');
+          } else if (deltaX > 0 && currentQuadrant === 3) {
+            isSwiping = false;
+            performKipp('east_from_q3');
+          }
         }
       }
     });
@@ -658,6 +741,7 @@
       isSwiping = false;
     });
     
+    // Universal-Kipp-Funktion (UNVERÄNDERT)
     async function performKipp(direction) {
       if (isAnimating) return;
       isAnimating = true;
@@ -668,49 +752,57 @@
         pivotPoint = new THREE.Vector3(-0.234375, 0, 0.109375);
         axis = 'x';
         targetRotation = -Math.PI / 2;
-        fromQ = 3; toQ = 0;
+        fromQ = 3;
+        toQ = 0;
         console.log('Kippe nach Norden (-Z): Q3 → Q0');
       } else if (direction === 'south') {
         pivotPoint = new THREE.Vector3(-0.234375, 0, 0.109375);
         axis = 'x';
         targetRotation = Math.PI / 2;
-        fromQ = 0; toQ = 3;
+        fromQ = 0;
+        toQ = 3;
         console.log('Kippe nach Süden (+Z): Q0 → Q3');
       } else if (direction === 'east') {
         pivotPoint = new THREE.Vector3(0, 0, 0.109375 + 0.234375);
         axis = 'z';
         targetRotation = -Math.PI / 2;
-        fromQ = 0; toQ = 1;
+        fromQ = 0;
+        toQ = 1;
         console.log('Kippe nach Osten (+X): Q0 → Q1');
       } else if (direction === 'west') {
         pivotPoint = new THREE.Vector3(0, 0, 0.109375 + 0.234375);
         axis = 'z';
         targetRotation = Math.PI / 2;
-        fromQ = 1; toQ = 0;
+        fromQ = 1;
+        toQ = 0;
         console.log('Kippe nach Westen (-X): Q1 → Q0');
       } else if (direction === 'south_from_q1') {
         pivotPoint = new THREE.Vector3(0.234375, 0, 0.109375);
         axis = 'x';
         targetRotation = Math.PI / 2;
-        fromQ = 1; toQ = 2;
+        fromQ = 1;
+        toQ = 2;
         console.log('Kippe nach Süden (+Z): Q1 → Q2');
       } else if (direction === 'north_from_q2') {
         pivotPoint = new THREE.Vector3(0.234375, 0, 0.109375);
         axis = 'x';
         targetRotation = -Math.PI / 2;
-        fromQ = 2; toQ = 1;
+        fromQ = 2;
+        toQ = 1;
         console.log('Kippe nach Norden (-Z): Q2 → Q1');
       } else if (direction === 'west_from_q2') {
         pivotPoint = new THREE.Vector3(0, 0, 0.109375 + 0.234375);
         axis = 'z';
         targetRotation = Math.PI / 2;
-        fromQ = 2; toQ = 3;
+        fromQ = 2;
+        toQ = 3;
         console.log('Kippe nach Westen (-X): Q2 → Q3');
       } else if (direction === 'east_from_q3') {
         pivotPoint = new THREE.Vector3(0, 0, 0.109375 + 0.234375);
         axis = 'z';
         targetRotation = -Math.PI / 2;
-        fromQ = 3; toQ = 2;
+        fromQ = 3;
+        toQ = 2;
         console.log('Kippe nach Osten (+X): Q3 → Q2');
       }
       
@@ -723,6 +815,7 @@
       cube.getWorldPosition(cubeWorldPos);
       
       kipGroup.remove(cube);
+      
       const relativePos = cubeWorldPos.clone().sub(pivotPoint);
       cube.position.copy(relativePos);
       pivotGroup.add(cube);
@@ -730,16 +823,25 @@
       const duration = 800;
       const startTime = Date.now();
       
-      function anim() {
+      function animate() {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        const eased = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
         
-        if (axis === 'x') pivotGroup.rotation.x = eased * targetRotation;
-        else pivotGroup.rotation.z = eased * targetRotation;
+        const eased = progress < 0.5 
+          ? 2 * progress * progress 
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
         
-        if (progress < 1) requestAnimationFrame(anim);
-        else finalizeKipp(toQ);
+        if (axis === 'x') {
+          pivotGroup.rotation.x = eased * targetRotation;
+        } else {
+          pivotGroup.rotation.z = eased * targetRotation;
+        }
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          finalizeKipp(toQ);
+        }
       }
       
       function finalizeKipp(newQ) {
@@ -749,6 +851,7 @@
         
         pivotGroup.remove(cube);
         kipGroup.remove(pivotGroup);
+        
         cube.position.copy(newWorldPos);
         cube.rotation.set(0, 0, 0);
         kipGroup.add(cube);
@@ -758,7 +861,7 @@
         isAnimating = false;
       }
       
-      anim();
+      animate();
     }
 
     // Animation loop
@@ -766,6 +869,7 @@
       requestAnimationFrame(animate);
       renderer.render(scene, camera);
     }
+
     animate();
   </script>
 </body>
