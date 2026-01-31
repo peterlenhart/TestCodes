@@ -47,7 +47,7 @@
 
     #hintText {
       position: absolute;
-      top: 380px;
+      top: 425px;
       left: 180px;
       transform: translateX(-50%);
       text-align: center;
@@ -66,7 +66,7 @@
 
     #countdown {
       position: absolute;
-      top: 430px;
+      top: 475px;
       left: 180px;
       transform: translateX(-50%);
       font-size: 50px;
@@ -84,7 +84,7 @@
 
     #actionButton {
       position: absolute;
-      top: 515px;
+      top: 560px;
       left: 180px;
       transform: translateX(-50%);
       padding: 8px 20px;
@@ -117,10 +117,45 @@
       50% { transform: translateX(-50%) scale(1.05); }
     }
 
-    /* BUTTONS 1-6 - Exakt auf derselben Y-Position wie "weiter" Button */
+    /* PLATZHALTER-RECHTECKE */
+    #placeholderRow {
+      position: absolute;
+      top: 443px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .placeholder {
+      width: 45px;
+      height: 90px;
+      background: #888888;
+      border-radius: 4px;
+    }
+
+    #kippAnzahlText {
+      position: absolute;
+      top: 543px;
+      left: 180px;
+      transform: translateX(-50%);
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 50%, #e0e0e0 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* BUTTONS 1-6 */
     #kippButtons {
       position: absolute;
-      top: 515px; /* Dieselbe Y-Position wie actionButton */
+      top: 575px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
@@ -223,6 +258,17 @@
     <button id="actionButton">weiter</button>
     <button id="backButton">↻</button>
     
+    <!-- Platzhalter-Rechtecke (Phase 3) -->
+    <div id="placeholderRow" class="hidden">
+      <div class="placeholder"></div>
+      <div class="placeholder"></div>
+      <div class="placeholder"></div>
+      <div class="placeholder"></div>
+      <div class="placeholder"></div>
+      <div class="placeholder"></div>
+    </div>
+    <div id="kippAnzahlText" class="hidden">KIPP ANZAHL?</div>
+
     <!-- Buttons 1-6 - Vernünftig positioniert -->
     <div id="kippButtons" class="hidden">
       <button class="kippBtn" data-anzahl="1">1</button>
@@ -255,19 +301,16 @@
     const baseY = 2.143;
     const verticalAngle = -1.0;
     const horizontal = 0;
-    const radius = 1.6;
+    const radius = 1.25;
+    const southShift = -0.143;
     
     camera.position.set(
       0 + Math.sin(horizontal) * 0.5,
       baseY + radius * Math.sin(-verticalAngle),
-      radius * Math.cos(verticalAngle) + Math.cos(horizontal) * 0.3
+      radius * Math.cos(verticalAngle) + Math.cos(horizontal) * 0.3 + southShift
     );
     
-    const lookAtBlend = Math.max(0, Math.min(1, (verticalAngle + 0.7) / 0.4));
-    const lookAtY = 0.234375 + (0.46875 - 0.234375) * (1 - lookAtBlend);
-    const lookAtZ = 0.7 + (0.421875 - 0.7) * lookAtBlend;
-    
-    camera.lookAt(0, lookAtY, lookAtZ);
+    camera.lookAt(0, 0.46875, 0.7 + southShift);
     
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(360, 720);
@@ -485,15 +528,173 @@
     scene.add(eastFrame);
 
     // =========================
-    // WÜRFEL
+    // FARBQUADRATE AUF RAHMEN
+    // =========================
+    const colorY = frameHeight + frameThickness / 2 + 0.001; // Direkt auf Rahmen-Oberfläche
+    const cellSize = 0.15625; // 1 Zelle
+    const colorThick = 0.002;
+
+    // Spalten X-Zentren (A=1..H=8), Frame links bei -0.625
+    function colX(letter) {
+      const idx = letter.charCodeAt(0) - 'A'.charCodeAt(0); // A=0..H=7
+      return -0.625 + cellSize / 2 + idx * cellSize;
+    }
+
+    // Zeilen Z-Zentren: Zeile 4 beginnt bei wallInnerNorth
+    function rowZ(row) {
+      return wallInnerNorth + (row - 4) * cellSize + cellSize / 2;
+    }
+
+    const COLORS = {
+      violett: 0xa41b85,
+      blau:    0x006bb3,
+      gruen:   0x00a652,
+      orange:  0xe67814
+    };
+
+    const colorSqSize = cellSize * 42 / 45; // 42px in Three.js-Einheiten
+
+    function addColorSquare(x, z, color) {
+      const geo = new THREE.BoxGeometry(colorSqSize, colorThick, colorSqSize);
+      const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.8, metalness: 0.1 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, colorY, z);
+      scene.add(mesh);
+    }
+
+    // Nord-Rahmen (Zeile 3)
+    const nordZ = wallInnerNorth - frameWidth / 2;
+    addColorSquare(colX('C'), nordZ, COLORS.gruen);
+    addColorSquare(colX('D'), nordZ, COLORS.orange);
+    addColorSquare(colX('E'), nordZ, COLORS.orange);
+    addColorSquare(colX('F'), nordZ, COLORS.blau);
+
+    // Süd-Rahmen (Zeile 10)
+    const südZ = wallInnerSouth + frameWidth / 2;
+    addColorSquare(colX('C'), südZ, COLORS.gruen);
+    addColorSquare(colX('D'), südZ, COLORS.violett);
+    addColorSquare(colX('E'), südZ, COLORS.violett);
+    addColorSquare(colX('F'), südZ, COLORS.blau);
+
+    // West-Rahmen (Spalte A): 5↔8 getauscht
+    const westX = wallInnerWest - frameWidth / 2;
+    addColorSquare(westX, rowZ(5), COLORS.violett);
+    addColorSquare(westX, rowZ(6), COLORS.blau);
+    addColorSquare(westX, rowZ(7), COLORS.blau);
+    addColorSquare(westX, rowZ(8), COLORS.orange);
+
+    // Ost-Rahmen (Spalte H)
+    const ostX = wallInnerEast + frameWidth / 2;
+    addColorSquare(ostX, rowZ(5), COLORS.violett);
+    addColorSquare(ostX, rowZ(6), COLORS.gruen);
+    addColorSquare(ostX, rowZ(7), COLORS.gruen);
+    addColorSquare(ostX, rowZ(8), COLORS.orange);
+
+
+    // =========================
+    // WÜRFEL mit 3x3 Grid-Textur
     // =========================
     const cubeSize = 0.46875;
+
+    // Randomdeck 1-12 mischen
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+    const deck = shuffle([1,2,3,4,5,6,7,8,9,10,11,12]);
+
+    // Slot-Zuordnung: welche Zelle auf welcher Face → deck-Index
+    // f0: 7=S1, 4=S2, 2=S3, 3=S4
+    // f1: 10=S1, 11=S2, 15=S3, 18=S4
+    // f2: 27=S1, 26=S2, 22=S3, 19=S4
+    // deck[0-3] → f0 Slots, deck[4-7] → f1 Slots, deck[8-11] → f2 Slots
+
+    // Canvas-Textur: 3x3 Gitter, nur bestimmte Zellen beschriften
+    // slotMap = { "row,col": Zahl } – nur Slots bekommen Werte
+    function createFaceTexture(slotMap, textRotation) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      const cell = 256 / 3;
+
+      // Bambusfarbe Grundfläche
+      ctx.fillStyle = '#a08060';
+      ctx.fillRect(0, 0, 256, 256);
+
+      // Nur Slot-Zellen beschriften
+      ctx.fillStyle = '#2a1810';
+      ctx.font = 'bold 56px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (const key in slotMap) {
+        const [r, c] = key.split(',').map(Number);
+        const cx = c * cell + cell / 2;
+        const cy = r * cell + cell / 2;
+        ctx.save();
+        ctx.translate(cx, cy);
+        if (textRotation) ctx.rotate(textRotation);
+        ctx.fillText(slotMap[key].toString(), 0, 0);
+        ctx.restore();
+      }
+
+      // Gitterlinien
+      ctx.strokeStyle = '#c4a882';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(85, 0);   ctx.lineTo(85, 256);
+      ctx.moveTo(171, 0);  ctx.lineTo(171, 256);
+      ctx.moveTo(0, 85);   ctx.lineTo(256, 85);
+      ctx.moveTo(0, 171);  ctx.lineTo(256, 171);
+      ctx.stroke();
+
+      // Rand
+      ctx.strokeStyle = '#6b5040';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(3, 3, 250, 250);
+
+      return canvas;
+    }
+
+    function mat(slotMap, textRotation) {
+      return new THREE.MeshStandardMaterial({
+        map: new THREE.CanvasTexture(createFaceTexture(slotMap || {}, textRotation)),
+        metalness: 0.3, roughness: 0.7
+      });
+    }
+
+    // Material-Array: [+X, -X, +Y, -Y, +Z, -Z]
+    // f0 (+Z): Zelle 7=row2col0=S1, 4=row1col0=S2, 2=row0col1=S3, 3=row0col2=S4
+    // f1 (-X): Zelle 10=row0col0=S1, 11=row0col1=S2, 15=row1col2=S3, 18=row2col2=S4
+    // f2 (+Y): Zelle 27=row2col2=S1, 26=row2col1=S2, 22=row1col0=S3, 19=row0col0=S4
+    const cubeMaterial = [
+      mat(null),            // [0] +X  – leer
+      mat({                 // [1] -X  = f1 (wird nach Ost-Kipp auf top) → Text 90° CW
+        '0,0': deck[4],    // S1 = Zelle 10
+        '0,1': deck[5],    // S2 = Zelle 11
+        '1,2': deck[6],    // S3 = Zelle 15
+        '2,2': deck[7]     // S4 = Zelle 18
+      }, Math.PI / 2),
+      mat({                 // [2] +Y  = f2
+        '2,2': deck[8],    // S1 = Zelle 27
+        '2,1': deck[9],    // S2 = Zelle 26
+        '1,0': deck[10],   // S3 = Zelle 22
+        '0,0': deck[11]    // S4 = Zelle 19
+      }),
+      mat(null),            // [3] -Y  – leer
+      mat({                 // [4] +Z  = f0
+        '2,0': deck[0],    // S1 = Zelle 7
+        '1,0': deck[1],    // S2 = Zelle 4
+        '0,1': deck[2],    // S3 = Zelle 2
+        '0,2': deck[3]     // S4 = Zelle 3
+      }),
+      mat(null)             // [5] -Z  – leer
+    ];
+
     const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
-    const cubeMaterial = new THREE.MeshStandardMaterial({
-      color: 0xff0000,
-      metalness: 0.3,
-      roughness: 0.7
-    });
     
     const offset = cubeSize / 2;
 
@@ -608,11 +809,12 @@
       stopCountdown();
       
       // UI umschalten
-      hintText.textContent = 'WÄHLE KIPP-ANZAHL';
+      hintText.style.display = 'none';
       actionButton.style.display = 'none';
+      document.getElementById('placeholderRow').classList.remove('hidden');
+      document.getElementById('kippAnzahlText').classList.remove('hidden');
       kippButtons.classList.remove('hidden');
       
-      console.log('Phase 3: Spielen - Buttons 1-6 sichtbar');
     }
     
     actionButton.addEventListener('click', () => {
@@ -632,7 +834,9 @@
       actionButton.textContent = 'weiter';
       actionButton.style.display = 'block';
       actionButton.classList.remove('pulse');
-      kippButtons.classList.add('hidden'); // Buttons verstecken
+      kippButtons.classList.add('hidden');
+      document.getElementById('placeholderRow').classList.add('hidden');
+      document.getElementById('kippAnzahlText').classList.add('hidden');
       
       // Würfel zurücksetzen zu Q3
       cube.position.set(-offset, offset, 0.109375 + offset);
@@ -646,19 +850,63 @@
         }
       });
       
-      console.log('Zurück zu Phase 2: Kippen-Modus');
     });
 
     // =========================
     // WÜRFEL-KIPPMECHANIK
+    // =========================
+    // DRAG-KIPP-STEUERUNG (Phase 2)
     // =========================
     let isSwiping = false;
     let swipeStartX = 0;
     let swipeStartY = 0;
     let isAnimating = false;
     let currentQuadrant = 3;
-    
-    // PHASE 2: Swipe-Steuerung (nur aktiv wenn gamePhase === 'kippen')
+
+    // Drag-State
+    let dragActive = false;
+    let dragPivotGroup = null;
+    let dragAxis = null;
+    let dragTargetSign = 0;
+    let dragToQ = 0;
+    let dragCurrentAngle = 0;
+    const DRAG_SENSITIVITY = 150; // px für volle 90°
+
+    function getKippConfig(direction) {
+      const configs = {
+        'north':         { pivotPoint: new THREE.Vector3(-0.234375, 0, 0.109375), axis: 'x', targetRotation: -Math.PI/2, toQ: 0 },
+        'south':         { pivotPoint: new THREE.Vector3(-0.234375, 0, 0.109375), axis: 'x', targetRotation:  Math.PI/2, toQ: 3 },
+        'east':          { pivotPoint: new THREE.Vector3(0, 0, 0.343125),         axis: 'z', targetRotation: -Math.PI/2, toQ: 1 },
+        'west':          { pivotPoint: new THREE.Vector3(0, 0, 0.343125),         axis: 'z', targetRotation:  Math.PI/2, toQ: 0 },
+        'south_from_q1': { pivotPoint: new THREE.Vector3(0.234375, 0, 0.109375),  axis: 'x', targetRotation:  Math.PI/2, toQ: 2 },
+        'north_from_q2': { pivotPoint: new THREE.Vector3(0.234375, 0, 0.109375),  axis: 'x', targetRotation: -Math.PI/2, toQ: 1 },
+        'west_from_q2':  { pivotPoint: new THREE.Vector3(0, 0, 0.343125),         axis: 'z', targetRotation:  Math.PI/2, toQ: 3 },
+        'east_from_q3':  { pivotPoint: new THREE.Vector3(0, 0, 0.343125),         axis: 'z', targetRotation: -Math.PI/2, toQ: 2 }
+      };
+      return configs[direction];
+    }
+
+    function getValidDirection(deltaX, deltaY) {
+      if (Math.abs(deltaY) >= Math.abs(deltaX)) {
+        if (deltaY < 0) {
+          if (currentQuadrant === 3) return 'north';
+          if (currentQuadrant === 2) return 'north_from_q2';
+        } else {
+          if (currentQuadrant === 0) return 'south';
+          if (currentQuadrant === 1) return 'south_from_q1';
+        }
+      } else {
+        if (deltaX > 0) {
+          if (currentQuadrant === 0) return 'east';
+          if (currentQuadrant === 3) return 'east_from_q3';
+        } else {
+          if (currentQuadrant === 1) return 'west';
+          if (currentQuadrant === 2) return 'west_from_q2';
+        }
+      }
+      return null;
+    }
+
     renderer.domElement.addEventListener('touchstart', (e) => {
       if (currentMode === 'kanten' && gamePhase === 'kippen') {
         if (isAnimating) return;
@@ -667,52 +915,131 @@
         swipeStartX = touch.clientX;
         swipeStartY = touch.clientY;
         isSwiping = true;
+        dragActive = false;
       }
     });
-    
+
     renderer.domElement.addEventListener('touchmove', (e) => {
-      if (currentMode === 'kanten' && isSwiping && !isAnimating && gamePhase === 'kippen') {
-        e.preventDefault();
-        
-        const touch = e.touches[0];
-        const deltaX = touch.clientX - swipeStartX;
-        const deltaY = touch.clientY - swipeStartY;
-      
-        if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 30) {
-          if (deltaY < 0 && currentQuadrant === 3) {
-            isSwiping = false;
-            performKipp('north', 800);
-          } else if (deltaY > 0 && currentQuadrant === 0) {
-            isSwiping = false;
-            performKipp('south', 800);
-          } else if (deltaY > 0 && currentQuadrant === 1) {
-            isSwiping = false;
-            performKipp('south_from_q1', 800);
-          } else if (deltaY < 0 && currentQuadrant === 2) {
-            isSwiping = false;
-            performKipp('north_from_q2', 800);
-          }
-        }
-        else if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
-          if (deltaX > 0 && currentQuadrant === 0) {
-            isSwiping = false;
-            performKipp('east', 800);
-          } else if (deltaX < 0 && currentQuadrant === 1) {
-            isSwiping = false;
-            performKipp('west', 800);
-          } else if (deltaX < 0 && currentQuadrant === 2) {
-            isSwiping = false;
-            performKipp('west_from_q2', 800);
-          } else if (deltaX > 0 && currentQuadrant === 3) {
-            isSwiping = false;
-            performKipp('east_from_q3', 800);
-          }
-        }
+      if (!isSwiping || isAnimating || gamePhase !== 'kippen' || currentMode !== 'kanten') return;
+      e.preventDefault();
+
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - swipeStartX;
+      const deltaY = touch.clientY - swipeStartY;
+
+      // Warte auf minimale Bewegung bevor Richtung bestimmt wird
+      if (!dragActive) {
+        if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 8) return;
+
+        const direction = getValidDirection(deltaX, deltaY);
+        if (!direction) { isSwiping = false; return; }
+
+        const config = getKippConfig(direction);
+        dragAxis = config.axis;
+        dragTargetSign = config.targetRotation > 0 ? 1 : -1;
+        dragToQ = config.toQ;
+
+        // Pivot-Gruppe setup
+        dragPivotGroup = new THREE.Group();
+        dragPivotGroup.position.copy(config.pivotPoint);
+        kipGroup.add(dragPivotGroup);
+
+        cube.updateMatrixWorld();
+        const cubeWorldPos = new THREE.Vector3();
+        cube.getWorldPosition(cubeWorldPos);
+        kipGroup.remove(cube);
+        cube.position.copy(cubeWorldPos.clone().sub(config.pivotPoint));
+        dragPivotGroup.add(cube);
+
+        dragActive = true;
+        dragCurrentAngle = 0;
+      }
+
+      // Rotation live berechnen
+      // X-Achse: deltaY direkt (oben neg, unten pos)
+      // Z-Achse: -deltaX (rechts pos wird neg Rotation)
+      const relevantDelta = (dragAxis === 'x') ? deltaY : -deltaX;
+      let angle = (relevantDelta / DRAG_SENSITIVITY) * (Math.PI / 2);
+
+      // Clamp zwischen 0 und targetRotation
+      if (dragTargetSign > 0) {
+        angle = Math.max(0, Math.min(Math.PI / 2, angle));
+      } else {
+        angle = Math.min(0, Math.max(-Math.PI / 2, angle));
+      }
+
+      dragCurrentAngle = angle;
+
+      if (dragAxis === 'x') {
+        dragPivotGroup.rotation.x = dragCurrentAngle;
+      } else {
+        dragPivotGroup.rotation.z = dragCurrentAngle;
       }
     });
-    
+
     renderer.domElement.addEventListener('touchend', () => {
       isSwiping = false;
+      if (!dragActive) return;
+
+      // Tipping-Point bei 45° (PI/4)
+      const absAngle = Math.abs(dragCurrentAngle);
+      let targetAngle, finalQ;
+
+      if (absAngle > Math.PI / 4) {
+        targetAngle = dragTargetSign * Math.PI / 2; // Kippen
+        finalQ = dragToQ;
+      } else {
+        targetAngle = 0; // Zurückfallen
+        finalQ = currentQuadrant;
+      }
+
+      // Schwerkraft-Fall-Animation
+      isAnimating = true;
+      const startAngle = dragCurrentAngle;
+      const angleDiff = targetAngle - startAngle;
+      const fallDuration = Math.max(150, Math.abs(angleDiff) / (Math.PI / 2) * 420);
+      const startTime = Date.now();
+
+      function animateFall() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / fallDuration, 1);
+
+        // Ease-in (t²) = Schwerkraft-Beschleunigung
+        const eased = progress * progress;
+        const currentAngle = startAngle + angleDiff * eased;
+
+        if (dragAxis === 'x') {
+          dragPivotGroup.rotation.x = currentAngle;
+        } else {
+          dragPivotGroup.rotation.z = currentAngle;
+        }
+
+        if (progress < 1) {
+          requestAnimationFrame(animateFall);
+        } else {
+          if (targetAngle === 0) {
+            // Zurückgefallen: Würfel zurück in kipGroup
+            cube.updateMatrixWorld();
+            const newPos = new THREE.Vector3();
+            cube.getWorldPosition(newPos);
+            const newQuat = new THREE.Quaternion();
+            cube.getWorldQuaternion(newQuat);
+            dragPivotGroup.remove(cube);
+            kipGroup.remove(dragPivotGroup);
+            cube.position.copy(newPos);
+            cube.quaternion.copy(newQuat);
+            kipGroup.add(cube);
+          } else {
+            // Gekippt: finalisieren
+            finalizeKipp(finalQ, null);
+          }
+          dragActive = false;
+          dragPivotGroup = null;
+          isAnimating = false;
+        }
+      }
+
+      animateFall();
     });
     
     async function performKipp(direction, duration = 800) {
@@ -817,6 +1144,8 @@
       cube.updateMatrixWorld();
       const newWorldPos = new THREE.Vector3();
       cube.getWorldPosition(newWorldPos);
+      const newWorldQuat = new THREE.Quaternion();
+      cube.getWorldQuaternion(newWorldQuat);
       
       const parent = cube.parent;
       if (parent && parent.parent) {
@@ -824,7 +1153,7 @@
       }
       
       cube.position.copy(newWorldPos);
-      cube.rotation.set(0, 0, 0);
+      cube.quaternion.copy(newWorldQuat);
       kipGroup.add(cube);
       
       currentQuadrant = newQ;
@@ -845,8 +1174,6 @@
       const T = getTiming();
       const kipFactor = 1;
       
-      console.log('Starte Sequenz mit', steps, 'Kipps');
-      console.log('Base Timing:', T);
       
       setButtonsDisabled(true);
       
@@ -857,7 +1184,6 @@
         const kipTime = Math.max(40, Math.round(T.kipMs * kipFactor * stepMul));
         const holdTime = Math.max(40, Math.round(T.wMs * stepMul));
         
-        console.log(`Kipp ${i+1}/${steps}: kip=${kipTime}ms, hold=${holdTime}ms, total=${kipTime+holdTime}ms`);
         
         let direction;
         if (currentQuadrant === 0) direction = 'east';
@@ -870,7 +1196,6 @@
       }
       
       setButtonsDisabled(false);
-      console.log('Sequenz beendet bei Q' + currentQuadrant);
     }
 
     // =========================
@@ -893,7 +1218,6 @@
         if (gamePhase !== 'spielen') return; // Nur in Phase 3 aktiv
         
         const anzahl = parseInt(btn.dataset.anzahl);
-        console.log('Button', anzahl, 'geklickt - Starte Sequenz');
         runKippSequence(anzahl);
       });
     });
